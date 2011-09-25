@@ -1,0 +1,251 @@
+#!/usr/bin/env python
+# Copyright 2011 OpenStack, LLC.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+import commands
+import optparse
+
+import os
+import sys
+
+VERBOSE = False
+
+
+def set_hooks_commit_msg(hostname="review.openstack.org"):
+
+    top_dir = commands.getoutput('git rev-parse --show-toplevel')
+    target_file = os.path.join(top_dir, ".git/hooks/commit-msg")
+    source_location = "https://%s/tools/hooks/commit-msg" % hostname
+
+    if os.path.exists(target_file) and os.access(target_file, os.X_OK):
+        return
+
+    if not os.path.exists(target_file):
+        import urllib
+        if VERBOSE:
+            print "Fetching source_location: ", source_location
+        commit_msg = urllib.urlretrieve(source_location, target_file)
+
+    if not os.access(target_file, os.X_OK):
+        os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
+
+    commands.getoutput("GIT_EDITOR=true git commit --amend")
+
+
+def add_remote(username, hostname, port, project):
+    """ Returns the remote host that was found """
+
+    if username is None:
+        username = os.getenv("USERNAME")
+    if port is None:
+        port = 29418
+
+    remote_url = "ssh://%s@%s:%s/%s.git" % (username, hostname, port, project)
+    print "No remote set, testing %s" % remote_url
+
+    ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s gerrit ls-projects"
+    cmd = ssh_cmd % (port, username, hostname)
+    (status, ssh_outout) = commands.getstatusoutput(cmd)
+    if status == 0:
+        print "%s@%s:%s worked." % (username, hostname, port)
+        print "Creating a git remote called gerrit that maps to:"
+        print "\t%s" % remote_url
+        cmd = "git remote add -f gerrit %s" % remote_url
+        (status, remote_output) = commands.getstatusoutput(cmd)
+
+    if status != 0:
+        raise Exception("Error running %s" % cmd)
+
+
+def split_hostname(hostname):
+
+    from urlparse import urlparse
+
+    parsed_url = urlparse(fetch_url)
+    username = None
+    hostname = parsed_url.netloc
+    port = 22
+
+    if "@" in hostname:
+        (username, hostname) = hostname.split("@")
+    if ":" in hostname:
+        (hostname, port) = hostname.split(":")
+
+    # Is origin an ssh location? Let's pull more info
+    if parsed_url.scheme == "ssh":
+        return (username, hostname, port)
+    else:
+        return (None, hostname, None)
+
+
+def map_known_locations(hostname, team, project):
+    # Assume that if we don't know about it, it's a proper gerrit location
+    if VERBOSE:
+        print "Mapping %s, %s, %s to a gerrit" % (hostname, team, project)
+
+    openstack_projects = ["nova", "swift", "glance", "keystone", "quantum",
+                          "openstack-dashboard"]
+    if hostname == "github.com":
+        # Welp, OBVIOUSLY _this_ isn't a gerrit
+        if team is not None and team == "openstack" or \
+            project in openstack_projects:
+            return ("review.openstack.org", "openstack/%s" % project)
+        else:
+            raise Exception("No possible way to guess given the input")
+    return hostname
+
+
+def check_remote():
+
+    if "gerrit" in commands.getoutput("git remote").split("\n"):
+
+        for remote in commands.getoutput("git branch -a").split("\n"):
+            if remote.strip() == "remotes/gerrit/master":
+                return
+        # We have the remote, but aren't set up to fetch. Fix it
+        if VERBOSE:
+            print "Setting up gerrit branch tracking for better rebasing"
+        commands.getoutput("git remote update gerrit")
+        return
+
+    fetch_url = ""
+    for line in commands.getoutput("git remote show -n origin").split("\n"):
+        if line.strip().startswith("Fetch URL"):
+            fetch_url = ":".join(line.split(":")[1:]).strip()
+
+    project_name = fetch_url.split("/")[-1]
+    if project_name.endswith(".git"):
+        project_name = project_name[:-4]
+
+    hostname = None
+    team = None
+    username = None
+    port = None
+
+    # Special-case git@github urls - the rest can be parsed with urlparse
+    if fetch_url.startswith("git@github.com"):
+        hostname = "github.com"
+        team = fetch_url.split(":")[1].split("/")[0]
+    else:
+        (username, hostname, port) = split_hostname(fetch_url)
+
+    #try:
+    (hostname, project) = map_known_locations(hostname, team, project_name)
+    add_remote(username, hostname, port, project)
+    #except:
+    #    print sys.exc_info()[2]
+    #    print "We don't know where your gerrit is. Please manually create "
+    #    print "a remote named gerrit and try again."
+    #    sys.exit(1)
+
+    return hostname
+
+
+def rebase_changes(branch):
+
+    cmd = "GIT_EDITOR=true git rebase -i gerrit/%s" % branch
+    (status, output) = commands.getstatusoutput(cmd)
+    if status != 0:
+        print "Couldn't run %s" % cmd
+        print output
+        sys.exit(1)
+
+
+def assert_diverge(branch):
+
+    cmd = "git diff gerrit/%s..HEAD" % branch
+    (status, output) = commands.getstatusoutput(cmd)
+    if len(output) == 0:
+        print "No changes between HEAD and gerrit/%s." % branch
+        print "Submitting for review would be pointless."
+        sys.exit(1)
+    if status != 0:
+        print "Had trouble running %s" % cmd
+        sys.exit(1)
+
+
+def get_topic():
+
+    import re
+
+    log_output = commands.getoutput("git show --format='%s %b'")
+    bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
+
+    match = re.search(bug_re, log_output)
+    if match is not None:
+        return match.group(2)
+
+    bp_re = r'\b([Bb]lue[Pp]rint|[Bb][Pp])\s*[#:]?\s*([0-9a-zA-Z-_]+)'
+    match = re.search(bp_re, log_output)
+    if match is not None:
+        return match.group(2)
+
+    for branch in commands.getoutput("git branch").split("\n"):
+        if branch.startswith('*'):
+            return branch.split()[1].strip()
+
+
+def main():
+
+    usage = "git review [OPTIONS] ... [BRANCH]"
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("-t", "--topic", dest="topic",
+                      help="Topic to submit branch to")
+    parser.add_option("-n", "--dry-run", dest="dry", action="store_true",
+                      help="Don't actually submit the branch for review")
+    parser.add_option("-R", "--no-rebase", dest="rebase",
+                      action="store_false",
+                      help="Don't rebase changes before submitting.")
+    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
+                      help="Output more information about what's going on")
+    parser.set_defaults(dry=False, rebase=True, verbose=False)
+
+    branch = "master"
+    (options, args) = parser.parse_args()
+    if len(args) > 0:
+        branch = args[0]
+    global VERBOSE
+    VERBOSE = options.verbose
+
+    topic = options.topic
+    if topic is None:
+        topic = get_topic()
+    if VERBOSE:
+        print "Found topic '%s' from parsing changes." % topic
+
+    drier = ""
+    if options.dry:
+        drier = "echo -e Please use the following command " \
+                "to send your commits to review:\n\n"
+
+    # TODO: when/should we do this so that it's not slow?
+    #cmd = "git fetch gerrit %s" % branch
+    #(status, output) = commands.getstatusoutput(cmd)
+
+    hostname = check_remote()
+
+    set_hooks_commit_msg(hostname)
+
+    if options.rebase:
+        rebase_changes(branch)
+    assert_diverge(branch)
+
+    cmd = "%s git push gerrit HEAD:refs/for/%s/%s" % (drier, branch, topic)
+    (status, output) = commands.getstatusoutput(cmd)
+    print output
+    sys.exit(status)
+
+if __name__ == "__main__":
+    main()
