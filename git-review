@@ -16,11 +16,53 @@
 
 import commands
 import optparse
+import urllib
+import json
+from distutils.version import StrictVersion
 
 import os
 import sys
+import time
+
+version = "1.0"
 
 VERBOSE = False
+UPDATE = False
+CONFIGDIR = os.path.expanduser("~/.config/git-review")
+PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
+PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
+
+
+def update_remote_version(version_file_path):
+
+    if not os.path.exists(CONFIGDIR):
+        os.makedirs(CONFIGDIR)
+
+    if os.path.exists(version_file_path) and not UPDATE:
+        if (time.time() - os.path.getmtime(version_file_path)) < 28800:
+            return
+
+    remote_version = version
+    try:
+        remote_version = json.load(urllib.urlopen(PYPI_URL))['info']['version']
+    except:
+        pass
+
+    with open(version_file_path, "w") as version_file:
+        version_file.write(remote_version)
+
+
+def remote_is_newer():
+
+    version_file_path = os.path.join(CONFIGDIR, "remote-version")
+    update_remote_version(version_file_path)
+
+    remote_version = None
+    with open(version_file_path, "r") as version_file:
+        remote_version = StrictVersion(version_file.read())
+    if remote_version > StrictVersion(version):
+        return True
+    return False
 
 
 def set_hooks_commit_msg(hostname="review.openstack.org"):
@@ -32,8 +74,7 @@ def set_hooks_commit_msg(hostname="review.openstack.org"):
     if os.path.exists(target_file) and os.access(target_file, os.X_OK):
         return
 
-    if not os.path.exists(target_file):
-        import urllib
+    if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
             print "Fetching source_location: ", source_location
         commit_msg = urllib.urlretrieve(source_location, target_file)
@@ -53,13 +94,15 @@ def add_remote(username, hostname, port, project):
         port = 29418
 
     remote_url = "ssh://%s@%s:%s/%s.git" % (username, hostname, port, project)
-    print "No remote set, testing %s" % remote_url
+    if VERBOSE:
+        print "No remote set, testing %s" % remote_url
 
     ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s gerrit ls-projects"
     cmd = ssh_cmd % (port, username, hostname)
     (status, ssh_outout) = commands.getstatusoutput(cmd)
     if status == 0:
-        print "%s@%s:%s worked." % (username, hostname, port)
+        if VERBOSE:
+            print "%s@%s:%s worked." % (username, hostname, port)
         print "Creating a git remote called gerrit that maps to:"
         print "\t%s" % remote_url
         cmd = "git remote add -f gerrit %s" % remote_url
@@ -95,9 +138,14 @@ def map_known_locations(hostname, team, project):
     if VERBOSE:
         print "Mapping %s, %s, %s to a gerrit" % (hostname, team, project)
 
-    openstack_projects = ["nova", "swift", "glance", "keystone", "quantum",
-                          "openstack-dashboard"]
     if hostname == "github.com":
+        os_github_url = "http://github.com/api/v2/json/repos/show/openstack"
+        os_projects_file = os.path.join(CONFIGDIR, "openstack.json")
+        os_json = json.load(urllib.urlopen(os_github_url))
+        os_projects = []
+        if os_json.get('repositories', None) is not None:
+            os_projects = [repo['name'] for repo in os_json['repositories']]
+
         # Welp, OBVIOUSLY _this_ isn't a gerrit
         if team is not None and team == "openstack" or \
             project in openstack_projects:
@@ -112,7 +160,7 @@ def check_remote():
     if "gerrit" in commands.getoutput("git remote").split("\n"):
 
         for remote in commands.getoutput("git branch -a").split("\n"):
-            if remote.strip() == "remotes/gerrit/master":
+            if remote.strip() == "remotes/gerrit/master" and not UPDATE:
                 return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
@@ -141,14 +189,14 @@ def check_remote():
     else:
         (username, hostname, port) = split_hostname(fetch_url)
 
-    #try:
-    (hostname, project) = map_known_locations(hostname, team, project_name)
-    add_remote(username, hostname, port, project)
-    #except:
-    #    print sys.exc_info()[2]
-    #    print "We don't know where your gerrit is. Please manually create "
-    #    print "a remote named gerrit and try again."
-    #    sys.exit(1)
+    try:
+        (hostname, project) = map_known_locations(hostname, team, project_name)
+        add_remote(username, hostname, port, project)
+    except:
+        print sys.exc_info()[2]
+        print "We don't know where your gerrit is. Please manually create "
+        print "a remote named gerrit and try again."
+        raise
 
     return hostname
 
@@ -158,9 +206,10 @@ def rebase_changes(branch):
     cmd = "GIT_EDITOR=true git rebase -i gerrit/%s" % branch
     (status, output) = commands.getstatusoutput(cmd)
     if status != 0:
-        print "Couldn't run %s" % cmd
+        print "Errors running %s" % cmd
         print output
-        sys.exit(1)
+        return False
+    return True
 
 
 def assert_diverge(branch):
@@ -197,6 +246,22 @@ def get_topic():
             return branch.split()[1].strip()
 
 
+def print_exit_message(status, needs_update):
+
+    if needs_update:
+        print """
+***********************************************************
+A new version of git-review is availble on PyPI. Please
+update your copy with:
+
+  pip install -U git-review
+
+to ensure proper behavior with gerrit. Thanks!
+***********************************************************
+"""
+    sys.exit(status)
+
+
 def main():
 
     usage = "git review [OPTIONS] ... [BRANCH]"
@@ -210,14 +275,18 @@ def main():
                       help="Don't rebase changes before submitting.")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
                       help="Output more information about what's going on")
-    parser.set_defaults(dry=False, rebase=True, verbose=False)
+    parser.add_option("-u", "--update", dest="update", action="store_true",
+                      help="Force updates from remote locations")
+    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False)
 
     branch = "master"
     (options, args) = parser.parse_args()
     if len(args) > 0:
         branch = args[0]
     global VERBOSE
+    global UPDATE
     VERBOSE = options.verbose
+    UPDATE = options.update
 
     topic = options.topic
     if topic is None:
@@ -230,22 +299,29 @@ def main():
         drier = "echo -e Please use the following command " \
                 "to send your commits to review:\n\n"
 
-    # TODO: when/should we do this so that it's not slow?
-    #cmd = "git fetch gerrit %s" % branch
-    #(status, output) = commands.getstatusoutput(cmd)
+    needs_update = remote_is_newer()
 
-    hostname = check_remote()
+    try:
+        hostname = check_remote()
+    except:
+        print_exit_message(1, needs_update)
 
     set_hooks_commit_msg(hostname)
 
+    if UPDATE:
+        cmd = "git fetch gerrit %s" % branch
+        (status, output) = commands.getstatusoutput(cmd)
+
     if options.rebase:
-        rebase_changes(branch)
+        if not rebase_changes(branch):
+            print_exit_message(1, needs_update)
     assert_diverge(branch)
 
     cmd = "%s git push gerrit HEAD:refs/for/%s/%s" % (drier, branch, topic)
     (status, output) = commands.getstatusoutput(cmd)
     print output
-    sys.exit(status)
+    print_exit_message(status, needs_update)
+
 
 if __name__ == "__main__":
     main()

@@ -39,6 +39,10 @@ OPTIONS
   Do not automatically perform a rebase before submitting the change to
   gerrit.
 
+.. option:: --update, -R
+
+  Skip cached local copies and force updates from network resources.
+
 .. option:: --verbose, -v
 
   Turns on more verbose output.
