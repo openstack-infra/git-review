@@ -33,7 +33,8 @@ PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
 
-def update_remote_version(version_file_path):
+def update_latest_version(version_file_path):
+    """ Cache the latest version of git-review for the upgrade check. """
 
     if not os.path.exists(CONFIGDIR):
         os.makedirs(CONFIGDIR)
@@ -42,30 +43,32 @@ def update_remote_version(version_file_path):
         if (time.time() - os.path.getmtime(version_file_path)) < 28800:
             return
 
-    remote_version = version
+    latest_version = version
     try:
-        remote_version = json.load(urllib.urlopen(PYPI_URL))['info']['version']
+        latest_version = json.load(urllib.urlopen(PYPI_URL))['info']['version']
     except:
         pass
 
     with open(version_file_path, "w") as version_file:
-        version_file.write(remote_version)
+        version_file.write(latest_version)
 
 
-def remote_is_newer():
+def latest_is_newer():
+    """ Check if there is a new version of git-review. """
 
-    version_file_path = os.path.join(CONFIGDIR, "remote-version")
-    update_remote_version(version_file_path)
+    version_file_path = os.path.join(CONFIGDIR, "latest-version")
+    update_latest_version(version_file_path)
 
-    remote_version = None
+    latest_version = None
     with open(version_file_path, "r") as version_file:
-        remote_version = StrictVersion(version_file.read())
-    if remote_version > StrictVersion(version):
+        latest_version = StrictVersion(version_file.read())
+    if latest_version > StrictVersion(version):
         return True
     return False
 
 
 def set_hooks_commit_msg(hostname="review.openstack.org"):
+    """ Install the commit message hook if needed. """
 
     top_dir = commands.getoutput('git rev-parse --show-toplevel')
     target_file = os.path.join(top_dir, ".git/hooks/commit-msg")
@@ -86,7 +89,7 @@ def set_hooks_commit_msg(hostname="review.openstack.org"):
 
 
 def add_remote(username, hostname, port, project):
-    """ Returns the remote host that was found """
+    """ Adds a gerrit remote. """
 
     if username is None:
         username = os.getenv("USERNAME")
@@ -112,7 +115,7 @@ def add_remote(username, hostname, port, project):
         raise Exception("Error running %s" % cmd)
 
 
-def split_hostname(hostname):
+def split_hostname(fetch_url):
 
     from urlparse import urlparse
 
@@ -148,7 +151,7 @@ def map_known_locations(hostname, team, project):
 
         # Welp, OBVIOUSLY _this_ isn't a gerrit
         if team is not None and team == "openstack" or \
-            project in openstack_projects:
+            project in os_projects:
             return ("review.openstack.org", "openstack/%s" % project)
         else:
             raise Exception("No possible way to guess given the input")
@@ -156,6 +159,7 @@ def map_known_locations(hostname, team, project):
 
 
 def check_remote():
+    """Check that a Gerrit Git remote repo exists, if not, set one."""
 
     if "gerrit" in commands.getoutput("git remote").split("\n"):
 
@@ -299,12 +303,9 @@ def main():
         drier = "echo -e Please use the following command " \
                 "to send your commits to review:\n\n"
 
-    needs_update = remote_is_newer()
+    needs_update = latest_is_newer()
 
-    try:
-        hostname = check_remote()
-    except:
-        print_exit_message(1, needs_update)
+    hostname = check_remote()
 
     set_hooks_commit_msg(hostname)
 
