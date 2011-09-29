@@ -17,7 +17,7 @@
 from setuptools import setup, find_packages
 
 # Please also change this in git-review when changing it.
-version = '1.0'
+version = '1.1'
 
 cmdclass = {}
 

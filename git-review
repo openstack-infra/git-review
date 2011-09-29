@@ -24,7 +24,7 @@ import os
 import sys
 import time
 
-version = "1.0"
+version = "1.1"
 
 VERBOSE = False
 UPDATE = False
