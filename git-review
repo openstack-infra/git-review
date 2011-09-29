@@ -142,6 +142,10 @@ def map_known_locations(hostname, team, project):
         print "Mapping %s, %s, %s to a gerrit" % (hostname, team, project)
 
     if hostname == "github.com":
+        # Welp, OBVIOUSLY _this_ isn't a gerrit
+        if team is not None and team in ("openstack", "openstack-ci"):
+            return ("review.openstack.org", "%s/%s" % (team, project))
+
         os_github_url = "http://github.com/api/v2/json/repos/show/openstack"
         os_projects_file = os.path.join(CONFIGDIR, "openstack.json")
         os_json = json.load(urllib.urlopen(os_github_url))
@@ -149,9 +153,7 @@ def map_known_locations(hostname, team, project):
         if os_json.get('repositories', None) is not None:
             os_projects = [repo['name'] for repo in os_json['repositories']]
 
-        # Welp, OBVIOUSLY _this_ isn't a gerrit
-        if team is not None and team == "openstack" or \
-            project in os_projects:
+        if project in os_projects:
             return ("review.openstack.org", "openstack/%s" % project)
         else:
             raise Exception("No possible way to guess given the input")
