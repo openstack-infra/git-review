@@ -19,6 +19,18 @@ If you want to submit that code to a different target branch, then:
 
 If you want to submit to a different remote:
 
-  git -r my-remote review
+  git review -r my-remote
+
+If you want to supply a review topic:
+
+  git review -t topic/awesome-feature
+
+If you want to submit your change to a branch other than master:
+
+  git review milestone-proposed
+
+If you want to skip the automatic rebase -i step:
+
+  git review -R
 
 

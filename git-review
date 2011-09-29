@@ -158,18 +158,19 @@ def map_known_locations(hostname, team, project):
     return hostname
 
 
-def check_remote():
+def check_remote(remote):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
-    if "gerrit" in commands.getoutput("git remote").split("\n"):
+    if remote in commands.getoutput("git remote").split("\n"):
 
-        for remote in commands.getoutput("git branch -a").split("\n"):
-            if remote.strip() == "remotes/gerrit/master" and not UPDATE:
+        for current_remote in commands.getoutput("git branch -a").split("\n"):
+            if current_remote.strip() == "remotes/%s/master" % (remote) \
+                and not UPDATE:
                 return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print "Setting up gerrit branch tracking for better rebasing"
-        commands.getoutput("git remote update gerrit")
+        commands.getoutput("git remote update %s")
         return
 
     fetch_url = ""
@@ -205,9 +206,9 @@ def check_remote():
     return hostname
 
 
-def rebase_changes(branch):
+def rebase_changes(branch, remote):
 
-    cmd = "GIT_EDITOR=true git rebase -i gerrit/%s" % branch
+    cmd = "GIT_EDITOR=true git rebase -i %s/%s" % (remote, branch)
     (status, output) = commands.getstatusoutput(cmd)
     if status != 0:
         print "Errors running %s" % cmd
@@ -216,12 +217,12 @@ def rebase_changes(branch):
     return True
 
 
-def assert_diverge(branch):
+def assert_diverge(branch, remote):
 
-    cmd = "git diff gerrit/%s..HEAD" % branch
+    cmd = "git diff %s/%s..HEAD" % (remote, branch)
     (status, output) = commands.getstatusoutput(cmd)
     if len(output) == 0:
-        print "No changes between HEAD and gerrit/%s." % branch
+        print "No changes between HEAD and %s/%s." % (remote, branch)
         print "Submitting for review would be pointless."
         sys.exit(1)
     if status != 0:
@@ -274,6 +275,8 @@ def main():
                       help="Topic to submit branch to")
     parser.add_option("-n", "--dry-run", dest="dry", action="store_true",
                       help="Don't actually submit the branch for review")
+    parser.add_option("-r", "--remote", dest="remote",
+                      help="git remote to use for gerrit")
     parser.add_option("-R", "--no-rebase", dest="rebase",
                       action="store_false",
                       help="Don't rebase changes before submitting.")
@@ -281,7 +284,8 @@ def main():
                       help="Output more information about what's going on")
     parser.add_option("-u", "--update", dest="update", action="store_true",
                       help="Force updates from remote locations")
-    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False)
+    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
+                        remote="gerrit")
 
     branch = "master"
     (options, args) = parser.parse_args()
@@ -291,6 +295,7 @@ def main():
     global UPDATE
     VERBOSE = options.verbose
     UPDATE = options.update
+    remote = options.remote
 
     topic = options.topic
     if topic is None:
@@ -305,20 +310,20 @@ def main():
 
     needs_update = latest_is_newer()
 
-    hostname = check_remote()
+    hostname = check_remote(remote)
 
     set_hooks_commit_msg(hostname)
 
     if UPDATE:
-        cmd = "git fetch gerrit %s" % branch
+        cmd = "git fetch %s %s" % (remote, branch)
         (status, output) = commands.getstatusoutput(cmd)
 
     if options.rebase:
-        if not rebase_changes(branch):
+        if not rebase_changes(branch, remote):
             print_exit_message(1, needs_update)
-    assert_diverge(branch)
+    assert_diverge(branch, remote)
 
-    cmd = "%s git push gerrit HEAD:refs/for/%s/%s" % (drier, branch, topic)
+    cmd = "%s git push %s HEAD:refs/for/%s/%s" % (remote, drier, branch, topic)
     (status, output) = commands.getstatusoutput(cmd)
     print output
     print_exit_message(status, needs_update)
