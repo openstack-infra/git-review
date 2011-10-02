@@ -32,6 +32,15 @@ CONFIGDIR = os.path.expanduser("~/.config/git-review")
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
+def run_command(cmd, status=False):
+    if VERBOSE:
+        print "Running:", cmd
+    stat, out = commands.getstatusoutput(cmd)
+    if status: return (stat, out)
+    return out
+
+def run_command_status(cmd):
+    return run_command(cmd, True)
 
 def update_latest_version(version_file_path):
     """ Cache the latest version of git-review for the upgrade check. """
@@ -70,7 +79,7 @@ def latest_is_newer():
 def set_hooks_commit_msg(hostname="review.openstack.org"):
     """ Install the commit message hook if needed. """
 
-    top_dir = commands.getoutput('git rev-parse --show-toplevel')
+    top_dir = run_command('git rev-parse --show-toplevel')
     target_file = os.path.join(top_dir, ".git/hooks/commit-msg")
     source_location = "https://%s/tools/hooks/commit-msg" % hostname
 
@@ -85,7 +94,7 @@ def set_hooks_commit_msg(hostname="review.openstack.org"):
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
-    commands.getoutput("GIT_EDITOR=true git commit --amend")
+    run_command("GIT_EDITOR=true git commit --amend")
 
 
 def add_remote(username, hostname, port, project):
@@ -102,14 +111,14 @@ def add_remote(username, hostname, port, project):
 
     ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s gerrit ls-projects"
     cmd = ssh_cmd % (port, username, hostname)
-    (status, ssh_outout) = commands.getstatusoutput(cmd)
+    (status, ssh_outout) = run_command_status(cmd)
     if status == 0:
         if VERBOSE:
             print "%s@%s:%s worked." % (username, hostname, port)
         print "Creating a git remote called gerrit that maps to:"
         print "\t%s" % remote_url
         cmd = "git remote add -f gerrit %s" % remote_url
-        (status, remote_output) = commands.getstatusoutput(cmd)
+        (status, remote_output) = run_command_status(cmd)
 
     if status != 0:
         raise Exception("Error running %s" % cmd)
@@ -163,20 +172,20 @@ def map_known_locations(hostname, team, project):
 def check_remote(remote):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
-    if remote in commands.getoutput("git remote").split("\n"):
+    if remote in run_command("git remote").split("\n"):
 
-        for current_remote in commands.getoutput("git branch -a").split("\n"):
+        for current_remote in run_command("git branch -a").split("\n"):
             if current_remote.strip() == "remotes/%s/master" % (remote) \
                 and not UPDATE:
                 return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print "Setting up gerrit branch tracking for better rebasing"
-        commands.getoutput("git remote update %s")
+        run_command("git remote update %s")
         return
 
     fetch_url = ""
-    for line in commands.getoutput("git remote show -n origin").split("\n"):
+    for line in run_command("git remote show -n origin").split("\n"):
         if line.strip().startswith("Fetch URL"):
             fetch_url = ":".join(line.split(":")[1:]).strip()
 
@@ -211,7 +220,7 @@ def check_remote(remote):
 def rebase_changes(branch, remote):
 
     cmd = "GIT_EDITOR=true git rebase -i %s/%s" % (remote, branch)
-    (status, output) = commands.getstatusoutput(cmd)
+    (status, output) = run_command_status(cmd)
     if status != 0:
         print "Errors running %s" % cmd
         print output
@@ -222,7 +231,7 @@ def rebase_changes(branch, remote):
 def assert_diverge(branch, remote):
 
     cmd = "git diff %s/%s..HEAD" % (remote, branch)
-    (status, output) = commands.getstatusoutput(cmd)
+    (status, output) = run_command_status(cmd)
     if len(output) == 0:
         print "No changes between HEAD and %s/%s." % (remote, branch)
         print "Submitting for review would be pointless."
@@ -236,7 +245,7 @@ def get_topic():
 
     import re
 
-    log_output = commands.getoutput("git show --format='%s %b'")
+    log_output = run_command("git show --format='%s %b'")
     bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
 
     match = re.search(bug_re, log_output)
@@ -248,7 +257,7 @@ def get_topic():
     if match is not None:
         return match.group(2)
 
-    for branch in commands.getoutput("git branch").split("\n"):
+    for branch in run_command("git branch").split("\n"):
         if branch.startswith('*'):
             return branch.split()[1].strip()
 
@@ -318,15 +327,15 @@ def main():
 
     if UPDATE:
         cmd = "git fetch %s %s" % (remote, branch)
-        (status, output) = commands.getstatusoutput(cmd)
+        (status, output) = run_command_status(cmd)
 
     if options.rebase:
         if not rebase_changes(branch, remote):
             print_exit_message(1, needs_update)
     assert_diverge(branch, remote)
 
-    cmd = "%s git push %s HEAD:refs/for/%s/%s" % (remote, drier, branch, topic)
-    (status, output) = commands.getstatusoutput(cmd)
+    cmd = "%s git push %s HEAD:refs/for/%s/%s" % (drier, remote, branch, topic)
+    (status, output) = run_command_status(cmd)
     print output
     print_exit_message(status, needs_update)
 
