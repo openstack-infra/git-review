@@ -43,6 +43,11 @@ OPTIONS
 
   Skip cached local copies and force updates from network resources.
 
+.. options:: --download, -d
+
+  Download a change from gerrit into a branch for review. Takes a numeric
+  change id as an argument.
+
 .. option:: --verbose, -v
 
   Turns on more verbose output.

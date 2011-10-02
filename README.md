@@ -33,4 +33,6 @@ If you want to skip the automatic rebase -i step:
 
   git review -R
 
+If you want to download change 781 from gerrit to review it:
 
+  git review -d 781

@@ -18,11 +18,16 @@ import commands
 import optparse
 import urllib
 import json
+
 from distutils.version import StrictVersion
+from urlparse import urlparse
+
 
 import os
 import sys
 import time
+import re
+
 
 version = "1.1"
 
@@ -32,15 +37,19 @@ CONFIGDIR = os.path.expanduser("~/.config/git-review")
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
+
 def run_command(cmd, status=False):
     if VERBOSE:
         print "Running:", cmd
     stat, out = commands.getstatusoutput(cmd)
-    if status: return (stat, out)
+    if status:
+        return (stat, out)
     return out
+
 
 def run_command_status(cmd):
     return run_command(cmd, True)
+
 
 def update_latest_version(version_file_path):
     """ Cache the latest version of git-review for the upgrade check. """
@@ -76,15 +85,18 @@ def latest_is_newer():
     return False
 
 
-def set_hooks_commit_msg(hostname="review.openstack.org"):
+def set_hooks_commit_msg():
     """ Install the commit message hook if needed. """
 
     top_dir = run_command('git rev-parse --show-toplevel')
     target_file = os.path.join(top_dir, ".git/hooks/commit-msg")
-    source_location = "https://%s/tools/hooks/commit-msg" % hostname
 
     if os.path.exists(target_file) and os.access(target_file, os.X_OK):
         return
+
+    (hostname, team, username, port, project_name) = \
+        parse_git_show("gerrit", "Push")
+    source_location = "https://%s/tools/hooks/commit-msg" % hostname
 
     if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
@@ -125,8 +137,6 @@ def add_remote(username, hostname, port, project):
 
 
 def split_hostname(fetch_url):
-
-    from urlparse import urlparse
 
     parsed_url = urlparse(fetch_url)
     username = None
@@ -169,25 +179,10 @@ def map_known_locations(hostname, team, project):
     return hostname
 
 
-def check_remote(remote):
-    """Check that a Gerrit Git remote repo exists, if not, set one."""
-
-    if remote in run_command("git remote").split("\n"):
-
-        for current_remote in run_command("git branch -a").split("\n"):
-            if current_remote.strip() == "remotes/%s/master" % (remote) \
-                and not UPDATE:
-                return
-        # We have the remote, but aren't set up to fetch. Fix it
-        if VERBOSE:
-            print "Setting up gerrit branch tracking for better rebasing"
-        run_command("git remote update %s")
-        return
-
-    # Gerrit remote not present, try to add it
+def parse_git_show(remote, verb):
     fetch_url = ""
-    for line in run_command("git remote show -n origin").split("\n"):
-        if line.strip().startswith("Fetch URL"):
+    for line in run_command("git remote show -n %s" % remote).split("\n"):
+        if line.strip().startswith("%s" % verb):
             fetch_url = ":".join(line.split(":")[1:]).strip()
 
     project_name = fetch_url.split("/")[-1]
@@ -200,7 +195,7 @@ def check_remote(remote):
     port = None
 
     if VERBOSE:
-        print "Found origin fetch URL:", fetch_url
+        print "Found origin %s URL:" % verb, fetch_url
 
     # Special-case git@github urls - the rest can be parsed with urlparse
     if fetch_url.startswith("git@github.com"):
@@ -210,7 +205,33 @@ def check_remote(remote):
 
     if hostname == "github.com":
         team = fetch_url.split("/")[-2]
+        if team.startswith("git@github.com"):
+            team = team.split(':')[1]
 
+    return (hostname, team, username, port, project_name)
+
+
+def check_remote(remote):
+    """Check that a Gerrit Git remote repo exists, if not, set one."""
+
+    if remote in run_command("git remote").split("\n"):
+
+        for current_remote in run_command("git branch -a").split("\n"):
+            if current_remote.strip() == "remotes/%s/master" % (remote) \
+                and not UPDATE:
+                return
+        # We have the remote, but aren't set up to fetch. Fix it
+        if VERBOSE:
+            print "Setting up gerrit branch tracking for better rebasing"
+        output = run_command("git remote update %s")
+        if VERBOSE:
+            print output
+        return
+
+    (hostname, team, username, port, project_name) = \
+        parse_git_show("origin", "Fetch")
+
+    # Gerrit remote not present, try to add it
     try:
         (hostname, project) = map_known_locations(hostname, team, project_name)
         add_remote(username, hostname, port, project)
@@ -219,8 +240,6 @@ def check_remote(remote):
         print "We don't know where your gerrit is. Please manually create "
         print "a remote named gerrit and try again."
         raise
-
-    return hostname
 
 
 def rebase_changes(branch, remote):
@@ -249,23 +268,92 @@ def assert_diverge(branch, remote):
 
 def get_topic():
 
-    import re
+    branch_name = None
+    for branch in run_command("git branch").split("\n"):
+        if branch.startswith('*'):
+            branch_name = branch.split()[1].strip()
+
+    branch_parts = branch_name.split("/")
+    if len(branch_parts) >= 3 and branch_parts[0] == "review":
+        return "/".join(branch_parts[2:])
 
     log_output = run_command("git show --format='%s %b'")
     bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
 
     match = re.search(bug_re, log_output)
     if match is not None:
-        return match.group(2)
+        return "bug/%s" % match.group(2)
 
     bp_re = r'\b([Bb]lue[Pp]rint|[Bb][Pp])\s*[#:]?\s*([0-9a-zA-Z-_]+)'
     match = re.search(bp_re, log_output)
     if match is not None:
-        return match.group(2)
+        return "bp/%s" % match.group(2)
 
-    for branch in run_command("git branch").split("\n"):
-        if branch.startswith('*'):
-            return branch.split()[1].strip()
+    return branch_name
+
+
+def download_review(review):
+
+    (hostname, team, username, port, project_name) = \
+        parse_git_show("gerrit", "Push")
+
+    ssh_cmds = ["ssh"]
+    if port is not None:
+        ssh_cmds.extend(["-p", port])
+    if username is not None:
+        ssh_cmds.append(["-l", username])
+    ssh_cmd = " ".join(ssh_cmds)
+
+    query_string = "--format=JSON --current-patch-set change:%s" % review
+    review_info = None
+    (status, output) = run_command_status("%s gerrit query %s"
+                                           % (ssh_cmd, query_string))
+
+    if status != 0:
+        print "Could not fetch review information from gerrit"
+        print output
+        return status
+    try:
+        review_info = json.loads(output.split("\n")[0])
+    except:
+        if VERBOSE:
+            print output
+        print "Could not find a gerrit review with id: %s" % review
+        return 1
+
+    topic = review_info['topic']
+    if topic == "master":
+        topic = review
+    author = re.sub('\W+', '_', review_info['owner']['name']).lower()
+    branch_name = "review/%s/%s" % (author, topic)
+    revision = review_info['currentPatchSet']['revision']
+    refspec = review_info['currentPatchSet']['ref']
+
+    print "Downloading %s from gerrit into %s" % (refspec, branch_name)
+    checkout_cmd = "git checkout -b %s remotes/gerrit/master" % branch_name
+    (status, output) = run_command_status(checkout_cmd)
+    if status != 0:
+        if output.endswith("already exists"):
+            print "Branch already exists - reusing"
+            checkout_cmd = "git checkout %s" % branch_name
+            (status, output) = run_command_status(checkout_cmd)
+            if status != 0:
+                print output
+                return status
+        else:
+            print output
+            return status
+
+    (status, output) = run_command_status("git pull gerrit %s" % refspec)
+    if status != 0:
+        print output
+        return status
+
+    (status, output) = run_command_status("git reset --hard %s" % revision)
+    if status != 0:
+        print output
+        return status
+    return 0
 
 
 def print_exit_message(status, needs_update):
@@ -299,6 +387,9 @@ def main():
                       help="Don't rebase changes before submitting.")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
                       help="Output more information about what's going on")
+    parser.add_option("-d", "--download", dest="download",
+                      help="Download the contents of an existing gerrit "
+                           "review into a branch")
     parser.add_option("-u", "--update", dest="update", action="store_true",
                       help="Force updates from remote locations")
     parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
@@ -314,35 +405,38 @@ def main():
     UPDATE = options.update
     remote = options.remote
 
-    topic = options.topic
-    if topic is None:
-        topic = get_topic()
-    if VERBOSE:
-        print "Found topic '%s' from parsing changes." % topic
-
-    drier = ""
-    if options.dry:
-        drier = "echo -e Please use the following command " \
-                "to send your commits to review:\n\n"
-
     needs_update = latest_is_newer()
+    check_remote(remote)
 
-    hostname = check_remote(remote)
+    if options.download is not None:
+        print_exit_message(download_review(options.download), needs_update)
+    else:
+        topic = options.topic
+        if topic is None:
+            topic = get_topic()
+        if VERBOSE:
+            print "Found topic '%s' from parsing changes." % topic
 
-    set_hooks_commit_msg(hostname)
+        drier = ""
+        if options.dry:
+            drier = "echo -e Please use the following command " \
+                    "to send your commits to review:\n\n"
 
-    if UPDATE:
-        cmd = "git fetch %s %s" % (remote, branch)
+        set_hooks_commit_msg()
+
+        if UPDATE:
+            cmd = "git fetch %s %s" % (remote, branch)
+            (status, output) = run_command_status(cmd)
+
+        if options.rebase:
+            if not rebase_changes(branch, remote):
+                print_exit_message(1, needs_update)
+        assert_diverge(branch, remote)
+
+        cmd = "%s git push %s HEAD:refs/for/%s/%s" % (drier, remote, branch,
+                                                      topic)
         (status, output) = run_command_status(cmd)
-
-    if options.rebase:
-        if not rebase_changes(branch, remote):
-            print_exit_message(1, needs_update)
-    assert_diverge(branch, remote)
-
-    cmd = "%s git push %s HEAD:refs/for/%s/%s" % (drier, remote, branch, topic)
-    (status, output) = run_command_status(cmd)
-    print output
+        print output
     print_exit_message(status, needs_update)
 
 
