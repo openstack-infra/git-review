@@ -184,6 +184,7 @@ def check_remote(remote):
         run_command("git remote update %s")
         return
 
+    # Gerrit remote not present, try to add it
     fetch_url = ""
     for line in run_command("git remote show -n origin").split("\n"):
         if line.strip().startswith("Fetch URL"):
@@ -198,12 +199,17 @@ def check_remote(remote):
     username = None
     port = None
 
+    if VERBOSE:
+        print "Found origin fetch URL:", fetch_url
+
     # Special-case git@github urls - the rest can be parsed with urlparse
     if fetch_url.startswith("git@github.com"):
         hostname = "github.com"
-        team = fetch_url.split(":")[1].split("/")[0]
     else:
         (username, hostname, port) = split_hostname(fetch_url)
+
+    if hostname == "github.com":
+        team = fetch_url.split("/")[-2]
 
     try:
         (hostname, project) = map_known_locations(hostname, team, project_name)
