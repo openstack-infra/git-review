@@ -20,8 +20,12 @@ from setuptools.command.bdist_egg import bdist_egg
 from sphinx.setup_command import BuildDoc
 import commands
 
-# Please also change this in git-review when changing it.
-version = '1.1'
+# version comes from git-review.
+savename = __name__
+__name__ = "not-main"
+exec(open("git-review", "r"))
+__name__ = savename
+
 
 cmdclass = {}
 
@@ -59,7 +63,7 @@ setup(
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
     url='http://www.openstack.org',
-    scripts=['git-review'],
+    scripts=('git-review'),
     data_files=[('share/man/man1', ['build/sphinx/man/git-review.1'])],
     cmdclass=cmdclass,
     )
