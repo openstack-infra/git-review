@@ -223,7 +223,7 @@ def check_remote(remote):
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print "Setting up gerrit branch tracking for better rebasing"
-        output = run_command("git remote update %s")
+        output = run_command("git remote update %s" % remote)
         if VERBOSE:
             print output
         return
