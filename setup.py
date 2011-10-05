@@ -14,29 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup, find_packages
+from distutils.core import setup
+from distutils.command.build import build
+from sphinx.setup_command import BuildDoc
+import commands
 
 # Please also change this in git-review when changing it.
 version = '1.1'
 
 cmdclass = {}
 
-# If Sphinx is installed on the box running setup.py,
-# enable setup.py to build the documentation, otherwise,
-# just ignore it
-try:
-    from sphinx.setup_command import BuildDoc
 
-    class local_BuildDoc(BuildDoc):
-        def run(self):
-            for builder in ['html', 'man']:
-                self.builder = builder
-                self.finalize_options()
-                BuildDoc.run(self)
-    cmdclass['build_sphinx'] = local_BuildDoc
+class local_build_sphinx(BuildDoc):
+    def run(self):
+        for builder in ['html', 'man']:
+            self.builder = builder
+            self.finalize_options()
+            BuildDoc.run(self)
+cmdclass['build_sphinx'] = local_build_sphinx
 
-except:
-    pass
+class local_build(build):
+    def run(self):
+        build.run(self)
+        commands.getoutput("sphinx-build -b man -c doc doc/ build/sphinx/man")
+cmdclass['build'] = local_build
 
 setup(
     name='git-review',
@@ -48,11 +49,7 @@ setup(
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
     url='http://www.openstack.org',
-    include_package_data=True,
-    #packages=find_packages(exclude=['test', 'bin']),
     scripts=['git-review'],
-    zip_safe=False,
+    data_files=[('share/man/man1',['build/sphinx/man/git-review.1'])],
     cmdclass=cmdclass,
-    install_requires=['setuptools'],
-    test_suite='nose.collector',
     )
