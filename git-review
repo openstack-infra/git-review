@@ -424,9 +424,8 @@ def main():
 
         set_hooks_commit_msg()
 
-        if UPDATE:
-            cmd = "git fetch %s %s" % (remote, branch)
-            (status, output) = run_command_status(cmd)
+        cmd = "git fetch %s %s" % (remote, branch)
+        (status, output) = run_command_status(cmd)
 
         if options.rebase:
             if not rebase_changes(branch, remote):
