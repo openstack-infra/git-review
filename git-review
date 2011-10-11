@@ -244,7 +244,23 @@ def check_remote(remote):
 
 def rebase_changes(branch, remote):
 
-    cmd = "GIT_EDITOR=true git rebase -i %s/%s" % (remote, branch)
+    remote_branch = "remotes/%s/%s" % (remote, branch)
+    needs_remote = True
+    for current_remote in run_command("git branch -a").split("\n"):
+        if current_remote.strip() == remote_branch:
+            needs_remote = False
+    if needs_remote:
+        cmd = "git remote update %s" % remote
+        (status, output) = run_command_status(cmd)
+        if VERBOSE:
+            print output
+        if status != 0:
+            print "Problem running '%s'" % cmd
+            if not VERBOSE:
+                print output
+            return False
+
+    cmd = "GIT_EDITOR=true git rebase -i %s" % remote_branch
     (status, output) = run_command_status(cmd)
     if status != 0:
         print "Errors running %s" % cmd
