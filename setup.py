@@ -63,7 +63,7 @@ setup(
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
     url='http://www.openstack.org',
-    scripts=('git-review'),
+    scripts=['git-review'],
     data_files=[('share/man/man1', ['build/sphinx/man/git-review.1'])],
     cmdclass=cmdclass,
     )
