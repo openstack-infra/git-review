@@ -408,8 +408,11 @@ def main():
                            "review into a branch")
     parser.add_option("-u", "--update", dest="update", action="store_true",
                       help="Force updates from remote locations")
+    parser.add_option("-s", "--setup", dest="setup", action="store_true",
+                      help="Just run the repo setup commands but don't "
+                           "submit anything")
     parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
-                        remote="gerrit")
+                        setup=False, remote="gerrit")
 
     branch = "master"
     (options, args) = parser.parse_args()
@@ -420,6 +423,7 @@ def main():
     VERBOSE = options.verbose
     UPDATE = options.update
     remote = options.remote
+    status = 0
 
     needs_update = latest_is_newer()
     check_remote(remote)
@@ -433,25 +437,26 @@ def main():
         if VERBOSE:
             print "Found topic '%s' from parsing changes." % topic
 
-        drier = ""
-        if options.dry:
-            drier = "echo -e Please use the following command " \
-                    "to send your commits to review:\n\n"
-
         set_hooks_commit_msg()
 
-        cmd = "git fetch %s %s" % (remote, branch)
-        (status, output) = run_command_status(cmd)
+        if not options.setup:
+            cmd = "git fetch %s %s" % (remote, branch)
+            (status, output) = run_command_status(cmd)
 
-        if options.rebase:
-            if not rebase_changes(branch, remote):
-                print_exit_message(1, needs_update)
-        assert_diverge(branch, remote)
+            if options.rebase:
+                if not rebase_changes(branch, remote):
+                    print_exit_message(1, needs_update)
+            assert_diverge(branch, remote)
 
-        cmd = "%s git push %s HEAD:refs/for/%s/%s" % (drier, remote, branch,
-                                                      topic)
-        (status, output) = run_command_status(cmd)
-        print output
+            cmd = "git push %s HEAD:refs/for/%s/%s" % (remote, branch, topic)
+            if options.dry:
+                print "Please use the following command " \
+                      "to send your commits to review:\n"
+                print "\t%s\n" % cmd
+            else:
+                (status, output) = run_command_status(cmd)
+                print output
+
     print_exit_message(status, needs_update)
 
 

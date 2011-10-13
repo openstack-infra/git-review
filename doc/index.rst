@@ -48,6 +48,11 @@ OPTIONS
   Download a change from gerrit into a branch for review. Takes a numeric
   change id as an argument.
 
+.. options:: --setup, -s
+
+  Just run throught the repo setup commands and then exit before attempting
+  to submit anything.
+
 .. option:: --verbose, -v
 
   Turns on more verbose output.
