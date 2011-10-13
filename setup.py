@@ -17,7 +17,6 @@
 from setuptools import setup
 from distutils.command.build import build
 from setuptools.command.bdist_egg import bdist_egg
-from sphinx.setup_command import BuildDoc
 import commands
 
 # version comes from git-review.
@@ -30,13 +29,18 @@ __name__ = savename
 cmdclass = {}
 
 
-class local_build_sphinx(BuildDoc):
-    def run(self):
-        for builder in ['html', 'man']:
-            self.builder = builder
-            self.finalize_options()
-            BuildDoc.run(self)
-cmdclass['build_sphinx'] = local_build_sphinx
+try:
+    from sphinx.setup_command import BuildDoc
+    class local_build_sphinx(BuildDoc):
+        def run(self):
+            for builder in ['html', 'man']:
+                self.builder = builder
+                self.finalize_options()
+                BuildDoc.run(self)
+    cmdclass['build_sphinx'] = local_build_sphinx
+except:
+    pass
+
 
 
 class local_build(build):
