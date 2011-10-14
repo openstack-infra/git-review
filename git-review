@@ -313,13 +313,13 @@ def download_review(review):
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
-        ssh_cmds.append(["-l", username])
+        ssh_cmds.extend(["-l", username])
     ssh_cmd = " ".join(ssh_cmds)
 
     query_string = "--format=JSON --current-patch-set change:%s" % review
     review_info = None
-    (status, output) = run_command_status("%s gerrit query %s"
-                                           % (ssh_cmd, query_string))
+    (status, output) = run_command_status("%s %s gerrit query %s"
+                                           % (ssh_cmd, hostname, query_string))
 
     if status != 0:
         print "Could not fetch review information from gerrit"
