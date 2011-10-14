@@ -8,7 +8,9 @@ git-review is a tool that helps submitting git branches to gerrit for review
 
 git-review, by default, looks for a git remote called gerrit, and submits the current branch to HEAD:refs/for/master at that remote.
 
-For example, to set it to the OpenStack Compute (nova) project (assuming you have previously signed in to the [OpenStack Gerrit server](https://review.openstack.org) with your Launchpad account), you would do:
+If the "gerrit" remote does not exist, git-review looks for a file called .gitreview at the root of the repository with information about the gerrit remote.
+
+If you want to manually create a gerrit remote, for example, to set it to the OpenStack Compute (nova) project (assuming you have previously signed in to the [OpenStack Gerrit server](https://review.openstack.org) with your Launchpad account), you would do:
 
     USERNAME=jsmith # Launchpad username here
     PROJECT=openstack/nova

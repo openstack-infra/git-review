@@ -57,3 +57,14 @@ OPTIONS
 
   Turns on more verbose output.
 
+PROJECT CONFIGURATION
+---------------------
+
+To use git-review with your project, it is recommended that you create
+a file at the root of the repository called ".gitreview" and place
+information about your gerrit installation in it.  The format is::
+
+  [gerrit]
+  host=review.example.com
+  port=29418
+  project=project.git

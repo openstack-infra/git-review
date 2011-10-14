@@ -21,13 +21,12 @@ import json
 
 from distutils.version import StrictVersion
 from urlparse import urlparse
-
+import ConfigParser
 
 import os
 import sys
 import time
 import re
-
 
 version = "1.2"
 
@@ -117,7 +116,7 @@ def add_remote(username, hostname, port, project):
     if port is None:
         port = 29418
 
-    remote_url = "ssh://%s@%s:%s/%s.git" % (username, hostname, port, project)
+    remote_url = "ssh://%s@%s:%s/%s" % (username, hostname, port, project)
     if VERBOSE:
         print "No remote set, testing %s" % remote_url
 
@@ -153,30 +152,6 @@ def split_hostname(fetch_url):
         return (username, hostname, port)
     else:
         return (None, hostname, None)
-
-
-def map_known_locations(hostname, team, project):
-    # Assume that if we don't know about it, it's a proper gerrit location
-    if VERBOSE:
-        print "Mapping %s, %s, %s to a gerrit" % (hostname, team, project)
-
-    if hostname == "github.com":
-        # Welp, OBVIOUSLY _this_ isn't a gerrit
-        if team is not None and team in ("openstack", "openstack-ci"):
-            return ("review.openstack.org", "%s/%s" % (team, project))
-
-        os_github_url = "http://github.com/api/v2/json/repos/show/openstack"
-        os_projects_file = os.path.join(CONFIGDIR, "openstack.json")
-        os_json = json.load(urllib.urlopen(os_github_url))
-        os_projects = []
-        if os_json.get('repositories', None) is not None:
-            os_projects = [repo['name'] for repo in os_json['repositories']]
-
-        if project in os_projects:
-            return ("review.openstack.org", "openstack/%s" % project)
-        else:
-            raise Exception("No possible way to guess given the input")
-    return hostname
 
 
 def parse_git_show(remote, verb):
@@ -228,12 +203,25 @@ def check_remote(remote):
             print output
         return
 
-    (hostname, team, username, port, project_name) = \
-        parse_git_show("origin", "Fetch")
+    # Check for a .gitreview at the top of the repo with the gerrit location
+    top_dir = run_command('git rev-parse --show-toplevel')
+    target_file = os.path.join(top_dir, ".gitreview")
+
+    if os.path.exists(target_file):
+        config = ConfigParser.ConfigParser(dict(port='29418'))
+        config.read(target_file)
+        hostname = config.get("gerrit", "host")
+        port = config.get("gerrit", "port")
+        project = config.get("gerrit", "project")
+        username = None
+    else:
+        print "No '.gitreview' file found in this repository."
+        print "We don't know where your gerrit is. Please manually create "
+        print "a remote named gerrit and try again."
+        sys.exit(1)
 
     # Gerrit remote not present, try to add it
     try:
-        (hostname, project) = map_known_locations(hostname, team, project_name)
         add_remote(username, hostname, port, project)
     except:
         print sys.exc_info()[2]
