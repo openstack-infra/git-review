@@ -113,6 +113,10 @@ def add_remote(username, hostname, port, project):
 
     if username is None:
         username = os.getenv("USERNAME")
+    if username is None:
+        username = os.getenv("USER")
+    if username is None:
+        username = raw_input("Enter your gerrit username: ")
     if port is None:
         port = 29418
 
