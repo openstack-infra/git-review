@@ -50,12 +50,20 @@ OPTIONS
 
 .. options:: --setup, -s
 
-  Just run throught the repo setup commands and then exit before attempting
+  Just run through the repo setup commands and then exit before attempting
   to submit anything.
 
 .. option:: --verbose, -v
 
   Turns on more verbose output.
+
+.. option:: --help, -h
+
+  Print usage information and exit.
+
+.. option:: --version
+
+  Print version information and exit.
 
 PROJECT CONFIGURATION
 ---------------------
@@ -68,3 +76,17 @@ information about your gerrit installation in it.  The format is::
   host=review.example.com
   port=29418
   project=project.git
+
+MANUAL CONFIGURATION
+--------------------
+
+If there is no existing remote named "gerrit", and no ".gitreview"
+file in the current repository, you may need to manually create a git
+remote called "gerrit".  To do so, execute a command like::
+
+  USERNAME=jsmith
+  PROJECT=foobar
+  git remote add gerrit ssh://$USERNAME@review.example.com:29418/$PROJECT.git
+
+Set USERNAME to your gerrit username, and PROJECT to the project name
+in gerrit.
