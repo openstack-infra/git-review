@@ -15,47 +15,12 @@
 # limitations under the License.
 
 from setuptools import setup
-from distutils.command.build import build
-from setuptools.command.bdist_egg import bdist_egg
-import commands
 
 # version comes from git-review.
 savename = __name__
 __name__ = "not-main"
 exec(open("git-review", "r"))
 __name__ = savename
-
-
-cmdclass = {}
-
-
-try:
-    from sphinx.setup_command import BuildDoc
-    class local_build_sphinx(BuildDoc):
-        def run(self):
-            for builder in ['html', 'man']:
-                self.builder = builder
-                self.finalize_options()
-                BuildDoc.run(self)
-    cmdclass['build_sphinx'] = local_build_sphinx
-except:
-    pass
-
-
-
-class local_build(build):
-    def run(self):
-        build.run(self)
-        commands.getoutput("sphinx-build -b man -c doc doc/ build/sphinx/man")
-cmdclass['build'] = local_build
-
-
-class local_bdist_egg(bdist_egg):
-    def run(self):
-        commands.getoutput("sphinx-build -b man -c doc doc/ build/sphinx/man")
-        bdist_egg.run(self)
-cmdclass['bdist_egg'] = local_bdist_egg
-
 
 setup(
     name='git-review',
@@ -68,6 +33,5 @@ setup(
     author_email='openstack@lists.launchpad.net',
     url='http://www.openstack.org',
     scripts=['git-review'],
-    data_files=[('share/man/man1', ['build/sphinx/man/git-review.1'])],
-    cmdclass=cmdclass,
+    data_files=[('share/man/man1', ['git-review.1'])],
     )
