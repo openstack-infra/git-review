@@ -30,7 +30,7 @@ import sys
 import time
 import re
 
-version = "1.4"
+version = "1.5"
 
 VERBOSE = False
 UPDATE = False
