@@ -53,6 +53,12 @@ instead.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-remote, \-r
+.sp
+git remote to use for gerrit
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-no\-rebase, \-R
 .sp
 Do not automatically perform a rebase before submitting the change to
@@ -60,9 +66,22 @@ gerrit.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-update, \-R
+.B \-\-update, \-u
 .sp
 Skip cached local copies and force updates from network resources.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-setup, \-s
+.sp
+Just run the repo setup commands but don\(aqt submit anything
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-yes, \-y
+.sp
+Indicate that you do, in fact, understand if you are submitting more than
+one patch
 .UNINDENT
 .INDENT 0.0
 .TP

@@ -38,6 +38,8 @@ CONFIGDIR = os.path.expanduser("~/.config/git-review")
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
+_branch_name = None
+
 
 def run_command(cmd, status=False):
     if VERBOSE:
@@ -259,25 +261,48 @@ def rebase_changes(branch, remote):
     return True
 
 
-def assert_diverge(branch, remote):
+def get_branch_name():
+    global _branch_name
+    if _branch_name is not None:
+        return _branch_name
+    _branch_name = None
+    for branch in run_command("git branch").split("\n"):
+        if branch.startswith('*'):
+            _branch_name = branch.split()[1].strip()
+    return _branch_name
 
-    cmd = "git diff %s/%s..HEAD" % (remote, branch)
+
+def assert_one_change(remote, branch, yes):
+
+    branch_name = get_branch_name()
+    cmd = "git log --oneline %s --not remotes/%s/%s" % (branch_name,
+                                                        remote, branch)
     (status, output) = run_command_status(cmd)
-    if len(output) == 0:
+    if status != 0:
+        print "Had trouble running %s" % cmd
+        print output
+        sys.exit(1)
+    output_lines = len(output.split("\n"))
+    if output_lines == 0:
         print "No changes between HEAD and %s/%s." % (remote, branch)
         print "Submitting for review would be pointless."
         sys.exit(1)
-    if status != 0:
-        print "Had trouble running %s" % cmd
-        sys.exit(1)
+    if output_lines > 1:
+        if not yes:
+            print "You have more than one commit that you are about to submit."
+            if VERBOSE:
+                print "The outstanding commits are:\n\n%s\n" % output
+            print "Is this really what you meant to do?"
+            yes_no = raw_input("Type 'yes' to confirm: ")
+            if yes_no.lower != "yes":
+                print "Aborting."
+                print "Please rebase/squash your changes and try again"
+                sys.exit(1)
 
 
 def get_topic():
 
-    branch_name = None
-    for branch in run_command("git branch").split("\n"):
-        if branch.startswith('*'):
-            branch_name = branch.split()[1].strip()
+    branch_name = get_branch_name()
 
     branch_parts = branch_name.split("/")
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
@@ -401,10 +426,13 @@ def main():
     parser.add_option("-s", "--setup", dest="setup", action="store_true",
                       help="Just run the repo setup commands but don't "
                            "submit anything")
+    parser.add_option("-y", "--yes", dest="yes", action="store_true",
+                      help="Indicate that you do, in fact, understand if you "
+                           "are submitting more than one patch")
     parser.add_option("--version", dest="version", action="store_true",
                       help="Print version number and exit")
     parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
-                        setup=False, version=False, remote="gerrit")
+                        setup=False, version=False, yes=False, remote="gerrit")
 
     branch = "master"
     (options, args) = parser.parse_args()
@@ -415,6 +443,7 @@ def main():
     VERBOSE = options.verbose
     UPDATE = options.update
     remote = options.remote
+    yes = options.yes
     status = 0
 
     if options.version:
@@ -440,7 +469,7 @@ def main():
             if options.rebase:
                 if not rebase_changes(branch, remote):
                     print_exit_message(1, needs_update)
-            assert_diverge(branch, remote)
+            assert_one_change(remote, branch, yes)
 
             cmd = "git push %s HEAD:refs/for/%s/%s" % (remote, branch, topic)
             if options.dry:
