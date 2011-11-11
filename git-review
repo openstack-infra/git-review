@@ -294,7 +294,7 @@ def assert_one_change(remote, branch, yes):
                 print "The outstanding commits are:\n\n%s\n" % output
             print "Is this really what you meant to do?"
             yes_no = raw_input("Type 'yes' to confirm: ")
-            if yes_no.lower != "yes":
+            if yes_no.lower().strip() != "yes":
                 print "Aborting."
                 print "Please rebase/squash your changes and try again"
                 sys.exit(1)
