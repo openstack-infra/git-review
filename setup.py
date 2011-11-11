@@ -15,6 +15,8 @@
 # limitations under the License.
 
 from setuptools import setup
+from distutils.command.install import install as du_install
+from setuptools.command.install import install
 
 # version comes from git-review.
 savename = __name__
@@ -22,9 +24,19 @@ __name__ = "not-main"
 exec(open("git-review", "r"))
 __name__ = savename
 
+class git_review_install(install):
+    # Force single-version-externally-managed
+    # This puts the manpage in the right location (instead of buried
+    # in an egg)
+    def run(self):
+        return du_install.run(self)
+
+git_review_cmdclass = {'install': git_review_install}
+
 setup(
     name='git-review',
     version=version,
+    cmdclass=git_review_cmdclass,
     description="Tool to submit code to Gerrit",
     license='Apache License (2.0)',
     classifiers=["Programming Language :: Python"],
