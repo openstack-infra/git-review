@@ -31,7 +31,7 @@ setup(
     keywords='git gerrit review',
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
-    url='http://www.openstack.org',
+    url='https://launchpad.net/git-review',
     scripts=['git-review'],
     data_files=[('share/man/man1', ['git-review.1'])],
     )
