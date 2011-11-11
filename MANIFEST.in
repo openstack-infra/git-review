@@ -2,4 +2,3 @@ include README.md
 include LICENSE
 include AUTHORS
 include git-review.1
-graft doc
