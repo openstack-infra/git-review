@@ -290,8 +290,7 @@ def assert_one_change(remote, branch, yes):
     if output_lines > 1:
         if not yes:
             print "You have more than one commit that you are about to submit."
-            if VERBOSE:
-                print "The outstanding commits are:\n\n%s\n" % output
+            print "The outstanding commits are:\n\n%s\n" % output
             print "Is this really what you meant to do?"
             yes_no = raw_input("Type 'yes' to confirm: ")
             if yes_no.lower != "yes":
