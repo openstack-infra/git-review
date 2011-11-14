@@ -261,7 +261,7 @@ def rebase_changes(branch, remote):
     return True
 
 
-def get_branch_name():
+def get_branch_name(target_branch):
     global _branch_name
     if _branch_name is not None:
         return _branch_name
@@ -269,12 +269,14 @@ def get_branch_name():
     for branch in run_command("git branch").split("\n"):
         if branch.startswith('*'):
             _branch_name = branch.split()[1].strip()
+    if _branch_name == "(no":
+        _branch_name = target_branch
     return _branch_name
 
 
 def assert_one_change(remote, branch, yes):
 
-    branch_name = get_branch_name()
+    branch_name = get_branch_name(branch)
     cmd = "git log --oneline %s --not remotes/%s/%s" % (branch_name,
                                                         remote, branch)
     (status, output) = run_command_status(cmd)
@@ -299,9 +301,9 @@ def assert_one_change(remote, branch, yes):
                 sys.exit(1)
 
 
-def get_topic():
+def get_topic(target_branch):
 
-    branch_name = get_branch_name()
+    branch_name = get_branch_name(target_branch)
 
     branch_parts = branch_name.split("/")
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
@@ -458,7 +460,7 @@ def main():
     else:
         topic = options.topic
         if topic is None:
-            topic = get_topic()
+            topic = get_topic(branch)
         if VERBOSE:
             print "Found topic '%s' from parsing changes." % topic
 
