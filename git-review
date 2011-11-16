@@ -194,12 +194,18 @@ def parse_git_show(remote, verb):
     return (hostname, team, username, port, project_name)
 
 
+def git_config_get_value(section, option):
+    cmd = "git config --get %s.%s" % (section, option)
+    return run_command(cmd).strip()
+
+
 def check_remote(remote):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
     if remote in run_command("git remote").split("\n"):
 
-        for current_remote in run_command("git branch -a").split("\n"):
+        remotes = run_command("git branch -a --color=never").split("\n")
+        for current_remote in remotes:
             if current_remote.strip() == "remotes/%s/master" % (remote) \
                 and not UPDATE:
                 return
@@ -266,7 +272,7 @@ def get_branch_name(target_branch):
     if _branch_name is not None:
         return _branch_name
     _branch_name = None
-    for branch in run_command("git branch").split("\n"):
+    for branch in run_command("git branch --color=never").split("\n"):
         if branch.startswith('*'):
             _branch_name = branch.split()[1].strip()
     if _branch_name == "(no":
@@ -275,10 +281,15 @@ def get_branch_name(target_branch):
 
 
 def assert_one_change(remote, branch, yes):
-
     branch_name = get_branch_name(branch)
-    cmd = "git log --oneline %s --not remotes/%s/%s" % (branch_name,
-                                                        remote, branch)
+    color = git_config_get_value("color", "ui")
+    if color == "":
+        color = "auto"
+    elif color == "auto":
+        # Python is not a tty, we have to force colors
+        color = "always"
+    cmd = "git log --color=%s --oneline %s --not remotes/%s/%s" % (color,
+                                              branch_name, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
         print "Had trouble running %s" % cmd
