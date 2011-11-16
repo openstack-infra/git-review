@@ -288,8 +288,8 @@ def assert_one_change(remote, branch, yes):
     elif color == "auto":
         # Python is not a tty, we have to force colors
         color = "always"
-    cmd = "git log --color=%s --oneline %s --not remotes/%s/%s" % (color,
-                                              branch_name, remote, branch)
+    cmd = "git log --color=%s --decorate --oneline %s --not remotes/%s/%s" % \
+              (color, branch_name, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
         print "Had trouble running %s" % cmd
