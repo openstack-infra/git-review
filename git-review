@@ -112,6 +112,35 @@ def set_hooks_commit_msg():
     run_command("GIT_EDITOR=true git commit --amend")
 
 
+def test_remote(username, hostname, port, project):
+    """ Tests that a possible gerrit remote works """
+
+    if username is None:
+        ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s gerrit ls-projects"
+        cmd = ssh_cmd % (port, hostname)
+    else:
+        ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s " \
+                      "gerrit ls-projects"
+        cmd = ssh_cmd % (port, username, hostname)
+    (status, ssh_outout) = run_command_status(cmd)
+    if status == 0:
+        if VERBOSE:
+            print "%s@%s:%s worked." % (username, hostname, port)
+        return True
+    else:
+        if VERBOSE:
+            print "%s@%s:%s did not work." % (username, hostname, port)
+        return False
+
+
+def make_remote_url(username, hostname, port, project):
+    """ Builds a gerrit remote URL """
+    if username is None:
+        return "ssh://%s:%s/%s" % (hostname, port, project)
+    else:
+        return "ssh://%s@%s:%s/%s" % (username, hostname, port, project)
+
+
 def add_remote(username, hostname, port, project):
     """ Adds a gerrit remote. """
 
@@ -119,25 +148,24 @@ def add_remote(username, hostname, port, project):
         username = os.getenv("USERNAME")
     if username is None:
         username = os.getenv("USER")
-    if username is None:
-        username = raw_input("Enter your gerrit username: ")
     if port is None:
         port = 29418
 
-    remote_url = "ssh://%s@%s:%s/%s" % (username, hostname, port, project)
+    remote_url = make_remote_url(username, hostname, port, project)
     if VERBOSE:
         print "No remote set, testing %s" % remote_url
+    if not test_remote(username, hostname, port, project):
+        print "Could not connect to gerrit."
+        username = raw_input("Enter your gerrit username: ")
+        remote_url = make_remote_url(username, hostname, port, project)
+        print "Trying again with %s" % remote_url
+        if not test_remote(username, hostname, port, project):
+            raise Exception("Could not connect to gerrit at %s" % remote_url)
 
-    ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s gerrit ls-projects"
-    cmd = ssh_cmd % (port, username, hostname)
-    (status, ssh_outout) = run_command_status(cmd)
-    if status == 0:
-        if VERBOSE:
-            print "%s@%s:%s worked." % (username, hostname, port)
-        print "Creating a git remote called gerrit that maps to:"
-        print "\t%s" % remote_url
-        cmd = "git remote add -f gerrit %s" % remote_url
-        (status, remote_output) = run_command_status(cmd)
+    print "Creating a git remote called gerrit that maps to:"
+    print "\t%s" % remote_url
+    cmd = "git remote add -f gerrit %s" % remote_url
+    (status, remote_output) = run_command_status(cmd)
 
     if status != 0:
         raise Exception("Error running %s" % cmd)
