@@ -42,9 +42,20 @@ If you want to download change 781 from gerrit to review it:
 
     git review -d 781
 
+If you just want to do the commit message and remote setup steps:
+
+    git review -s
+
 ## Contributing
 
-To get the latest code or for information about contributing, visit
-the project homepage at:
+To get the latest code, see:
 
-  https://launchpad.net/git-review
+    https://github.com/openstack-ci/git-review
+
+Bugs are handled at:
+
+    https://launchpad.net/git-review
+
+Code reviews are, as you might expect, handled by gerrit. The gerrit they
+use is http://review.openstack.org. Use git review to submit patches.
+submit them.
