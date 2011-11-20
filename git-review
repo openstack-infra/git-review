@@ -143,10 +143,13 @@ def make_remote_url(username, hostname, port, project):
 
 def add_remote(username, hostname, port, project):
     """ Adds a gerrit remote. """
+    asked_for_username = False
 
-    if username is None:
+    if not username:
         username = os.getenv("USERNAME")
-    if username is None:
+    if not username:
+        username = run_command('git config --get gitreview.username')
+    if not username:
         username = os.getenv("USER")
     if port is None:
         port = 29418
@@ -161,6 +164,7 @@ def add_remote(username, hostname, port, project):
         print "Trying again with %s" % remote_url
         if not test_remote(username, hostname, port, project):
             raise Exception("Could not connect to gerrit at %s" % remote_url)
+        asked_for_username = True
 
     print "Creating a git remote called gerrit that maps to:"
     print "\t%s" % remote_url
@@ -169,6 +173,13 @@ def add_remote(username, hostname, port, project):
 
     if status != 0:
         raise Exception("Error running %s" % cmd)
+
+    if asked_for_username:
+        print
+        print "This repository is now set up for use with git-review."
+        print "You can set the default username for future repositories with:"
+        print '  git config --global --add gitreview.username "%s"' % username
+        print
 
 
 def split_hostname(fetch_url):
