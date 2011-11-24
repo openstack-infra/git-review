@@ -92,10 +92,15 @@ def set_hooks_commit_msg():
     """ Install the commit message hook if needed. """
 
     top_dir = run_command('git rev-parse --show-toplevel')
-    target_file = os.path.join(top_dir, ".git/hooks/commit-msg")
+    hooks_dir = os.path.join(top_dir, ".git/hooks")
+    target_file = os.path.join(hooks_dir, "commit-msg")
 
     if os.path.exists(target_file) and os.access(target_file, os.X_OK):
         return
+
+    # Create the hooks directory if it's not there already
+    if not os.path.isdir(hooks_dir):
+        os.mkdir(hooks_dir)
 
     (hostname, team, username, port, project_name) = \
         parse_git_show("gerrit", "Push")
