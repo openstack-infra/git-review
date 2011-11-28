@@ -39,6 +39,7 @@ PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
 _branch_name = None
+_has_color = None
 
 
 def run_command(cmd, status=False):
@@ -243,12 +244,30 @@ def git_config_get_value(section, option):
     return run_command(cmd).strip()
 
 
+def check_color_support():
+    global _has_color
+    if _has_color is None:
+        test_command = "git log --color=never --oneline HEAD^1..HEAD"
+        (status, output) = run_command_status(test_command)
+        if status == 0:
+            _has_color = True
+        else:
+            _has_color = False
+    return _has_color
+
+
 def check_remote(remote):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
+    has_color = check_color_support()
+    if has_color:
+        color_never = "--color=never"
+    else:
+        color_never = ""
+
     if remote in run_command("git remote").split("\n"):
 
-        remotes = run_command("git branch -a --color=never").split("\n")
+        remotes = run_command("git branch -a %s" % color_never).split("\n")
         for current_remote in remotes:
             if current_remote.strip() == "remotes/%s/master" % (remote) \
                 and not UPDATE:
@@ -316,7 +335,12 @@ def get_branch_name(target_branch):
     if _branch_name is not None:
         return _branch_name
     _branch_name = None
-    for branch in run_command("git branch --color=never").split("\n"):
+    has_color = check_color_support()
+    if has_color:
+        color_never = "--color=never"
+    else:
+        color_never = ""
+    for branch in run_command("git branch %s" % color_never).split("\n"):
         if branch.startswith('*'):
             _branch_name = branch.split()[1].strip()
     if _branch_name == "(no":
@@ -326,14 +350,19 @@ def get_branch_name(target_branch):
 
 def assert_one_change(remote, branch, yes):
     branch_name = get_branch_name(branch)
-    color = git_config_get_value("color", "ui")
-    if color == "":
-        color = "auto"
-    elif color == "auto":
-        # Python is not a tty, we have to force colors
-        color = "always"
-    cmd = "git log --color=%s --decorate --oneline %s --not remotes/%s/%s" % \
-              (color, branch_name, remote, branch)
+    has_color = check_color_support()
+    if has_color:
+        color = git_config_get_value("color", "ui")
+        if color == "":
+            color = "auto"
+        elif color == "auto":
+            # Python is not a tty, we have to force colors
+            color = "always"
+        use_color = "--color=%s" % color
+    else:
+        use_color = ""
+    cmd = "git log %s --decorate --oneline %s --not remotes/%s/%s" % \
+              (use_color, branch_name, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
         print "Had trouble running %s" % cmd
