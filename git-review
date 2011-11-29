@@ -446,7 +446,12 @@ def download_review(review):
     refspec = review_info['currentPatchSet']['ref']
 
     print "Downloading %s from gerrit into %s" % (refspec, branch_name)
-    checkout_cmd = "git checkout -b %s remotes/gerrit/master" % branch_name
+    (status, output) = run_command_status("git fetch gerrit %s" % refspec)
+    if status != 0:
+        print output
+        return status
+
+    checkout_cmd = "git checkout -b %s FETCH_HEAD" % branch_name
     (status, output) = run_command_status(checkout_cmd)
     if status != 0:
         if output.endswith("already exists"):
@@ -456,19 +461,15 @@ def download_review(review):
             if status != 0:
                 print output
                 return status
+            reset_cmd = "git reset --hard FETCH_HEAD"
+            (status, output) = run_command_status(reset_cmd)
+            if status != 0:
+                print output
+                return status
         else:
             print output
             return status
 
-    (status, output) = run_command_status("git pull gerrit %s" % refspec)
-    if status != 0:
-        print output
-        return status
-
-    (status, output) = run_command_status("git reset --hard %s" % revision)
-    if status != 0:
-        print output
-        return status
     return 0
 
 
