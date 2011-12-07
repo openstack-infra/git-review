@@ -437,8 +437,11 @@ def download_review(review):
         print "Could not find a gerrit review with id: %s" % review
         return 1
 
-    topic = review_info['topic']
-    if topic == "master":
+    try:
+        topic = review_info['topic']
+        if topic == "master":
+            topic = review
+    except KeyError:
         topic = review
     author = re.sub('\W+', '_', review_info['owner']['name']).lower()
     branch_name = "review/%s/%s" % (author, topic)
