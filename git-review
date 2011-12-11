@@ -97,7 +97,7 @@ def set_hooks_commit_msg(remote):
     target_file = os.path.join(hooks_dir, "commit-msg")
 
     if os.path.exists(target_file) and os.access(target_file, os.X_OK):
-        return
+        return True
 
     # Create the hooks directory if it's not there already
     if not os.path.isdir(hooks_dir):
@@ -105,30 +105,42 @@ def set_hooks_commit_msg(remote):
 
     (hostname, team, username, port, project_name) = \
         parse_git_show(remote, "Push")
-    source_location = "https://%s/tools/hooks/commit-msg" % hostname
 
     if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
-            print "Fetching source_location: ", source_location
-        urllib.urlretrieve(source_location, target_file)
+            print "Fetching commit hook from: scp://%s:%s" % (hostname, port)
+        scp_cmd = "scp "
+        if port is not None:
+            scp_cmd += "-P%s " % port
+        if username is None:
+            scp_cmd += hostname
+        else:
+            scp_cmd += "%s@%s" % (username, hostname)
+        scp_cmd += ":hooks/commit-msg %s" % target_file
+        (status, scp_output) = run_command_status(scp_cmd)
+        if status != 0:
+            print "Problems encountered installing commit-msg hook"
+            print scp_output
+            return False
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
     run_command("GIT_EDITOR=true git commit --amend")
 
+    return True
+
 
 def test_remote(username, hostname, port, project):
     """ Tests that a possible gerrit remote works """
 
     if username is None:
-        ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s gerrit ls-projects"
+        ssh_cmd = "ssh -p%s %s gerrit ls-projects"
         cmd = ssh_cmd % (port, hostname)
     else:
-        ssh_cmd = "ssh -p%s -o StrictHostKeyChecking=no %s@%s " \
-                      "gerrit ls-projects"
+        ssh_cmd = "ssh -p%s %s@%s gerrit ls-projects"
         cmd = ssh_cmd % (port, username, hostname)
-    (status, ssh_outout) = run_command_status(cmd)
+    (status, ssh_output) = run_command_status(cmd)
     if status == 0:
         if VERBOSE:
             print "%s@%s:%s worked." % (username, hostname, port)
@@ -552,7 +564,8 @@ def main():
         if VERBOSE:
             print "Found topic '%s' from parsing changes." % topic
 
-        set_hooks_commit_msg(remote)
+        if not set_hooks_commit_msg(remote):
+            print_exit_message(1, needs_update)
 
         if not options.setup:
             if options.rebase:
