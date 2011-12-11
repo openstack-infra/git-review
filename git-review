@@ -89,7 +89,7 @@ def latest_is_newer():
     return False
 
 
-def set_hooks_commit_msg():
+def set_hooks_commit_msg(remote):
     """ Install the commit message hook if needed. """
 
     top_dir = run_command('git rev-parse --show-toplevel')
@@ -104,7 +104,7 @@ def set_hooks_commit_msg():
         os.mkdir(hooks_dir)
 
     (hostname, team, username, port, project_name) = \
-        parse_git_show("gerrit", "Push")
+        parse_git_show(remote, "Push")
     source_location = "https://%s/tools/hooks/commit-msg" % hostname
 
     if not os.path.exists(target_file) or UPDATE:
@@ -552,7 +552,7 @@ def main():
         if VERBOSE:
             print "Found topic '%s' from parsing changes." % topic
 
-        set_hooks_commit_msg()
+        set_hooks_commit_msg(remote)
 
         if not options.setup:
             if options.rebase:
