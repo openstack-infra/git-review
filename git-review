@@ -16,7 +16,6 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-import commands
 import optparse
 import urllib
 import json
@@ -29,6 +28,8 @@ import os
 import sys
 import time
 import re
+import shlex
+import subprocess
 
 version = "1.7"
 
@@ -42,17 +43,22 @@ _branch_name = None
 _has_color = None
 
 
-def run_command(cmd, status=False):
+def run_command(cmd, status=False, env={}):
     if VERBOSE:
         print "Running:", cmd
-    stat, out = commands.getstatusoutput(cmd)
+    cmd_list = shlex.split(cmd)
+    newenv = os.environ
+    newenv.update(env)
+    p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, env=newenv)
+    (out, nothing) = p.communicate()
     if status:
-        return (stat, out)
-    return out
+        return (p.returncode, out.strip())
+    return out.strip()
 
 
-def run_command_status(cmd):
-    return run_command(cmd, True)
+def run_command_status(cmd, env={}):
+    return run_command(cmd, True, env)
 
 
 def update_latest_version(version_file_path):
@@ -115,7 +121,7 @@ def set_hooks_commit_msg(remote):
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
-    run_command("GIT_EDITOR=true git commit --amend")
+    run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
 
 
 def test_remote(username, hostname, port, project):
@@ -321,8 +327,8 @@ def rebase_changes(branch, remote):
             print output
         return False
 
-    cmd = "GIT_EDITOR=true git rebase -i %s" % remote_branch
-    (status, output) = run_command_status(cmd)
+    cmd = "git rebase -i %s" % remote_branch
+    (status, output) = run_command_status(cmd, env=dict(GIT_EDITOR='true'))
     if status != 0:
         print "Errors running %s" % cmd
         print output
