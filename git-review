@@ -207,6 +207,11 @@ def split_hostname(fetch_url):
     hostname = parsed_url.netloc
     port = 22
 
+    # Workaround bug in urlparse on OSX
+    if parsed_url.scheme == "ssh" and hostname[:2] == "//":
+        hostname = hostname[2:]
+        hostname = hostname.split("/")[0]
+
     if "@" in hostname:
         (username, hostname) = hostname.split("@")
     if ":" in hostname:
