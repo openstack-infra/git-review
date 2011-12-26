@@ -34,6 +34,10 @@ If you want to supply a review topic:
 
     git review -t topic/awesome-feature
 
+If you want to submit a branch for review and then remove the local branch:
+
+    git review -f
+
 If you want to skip the automatic "git rebase -i" step:
 
     git review -R

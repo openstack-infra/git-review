@@ -549,8 +549,6 @@ def main():
     parser.add_option("-R", "--no-rebase", dest="rebase",
                       action="store_false",
                       help="Don't rebase changes before submitting.")
-    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
-                      help="Output more information about what's going on")
     parser.add_option("-d", "--download", dest="download",
                       help="Download the contents of an existing gerrit "
                            "review into a branch")
@@ -565,6 +563,8 @@ def main():
     parser.add_option("-y", "--yes", dest="yes", action="store_true",
                       help="Indicate that you do, in fact, understand if you "
                            "are submitting more than one patch")
+    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
+                      help="Output more information about what's going on")
     parser.add_option("--version", dest="version", action="store_true",
                       help="Print version number and exit")
     parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,

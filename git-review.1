@@ -58,6 +58,11 @@ git remote to use for gerrit
 Do not automatically perform a rebase before submitting the change to
 gerrit.
 .TP
+.B \-\-download, \-d
+.sp
+Treat the argument as the review id of a review to download into a local
+branch.
+.TP
 .B \-\-update, \-u
 .sp
 Skip cached local copies and force updates from network resources.
@@ -65,6 +70,11 @@ Skip cached local copies and force updates from network resources.
 .B \-\-setup, \-s
 .sp
 Just run the repo setup commands but don\(aqt submit anything
+.TP
+.B \-\-finish, \-f
+.sp
+Close down the local branch and switch back to the target branch on
+successful submission.
 .TP
 .B \-\-yes, \-y
 .sp
@@ -74,6 +84,10 @@ one patch
 .B \-\-verbose, \-v
 .sp
 Turns on more verbose output.
+.TP
+.B \-\-version
+.sp
+Print the version number and exit.
 .UNINDENT
 .SH PROJECT CONFIGURATION
 .sp
