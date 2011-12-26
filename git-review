@@ -496,6 +496,27 @@ def download_review(review):
             print output
             return status
 
+    print "Switched to branch '%s'" % branch_name
+    return 0
+
+
+def finish_branch(target_branch):
+    local_branch = get_branch_name(target_branch)
+    if VERBOSE:
+        print "Switching back to %s and deleting %s" % (target_branch,
+                                                        local_branch)
+    checkout_cmd = "git checkout %s" % target_branch
+    (status, output) = run_command_status(checkout_cmd)
+    if status != 0:
+        print output
+        return status
+    print "Switched to branch '%s'" % target_branch
+    close_cmd = "git branch -D %s" % local_branch
+    (status, output) = run_command_status(close_cmd)
+    if status != 0:
+        print output
+        return status
+    print "Deleted branch '%s'" % local_branch
     return 0
 
 
@@ -538,6 +559,9 @@ def main():
     parser.add_option("-s", "--setup", dest="setup", action="store_true",
                       help="Just run the repo setup commands but don't "
                            "submit anything")
+    parser.add_option("-f", "--finish", dest="finish", action="store_true",
+                      help="Close down this branch and switch back to "
+                           "master on successful submission")
     parser.add_option("-y", "--yes", dest="yes", action="store_true",
                       help="Indicate that you do, in fact, understand if you "
                            "are submitting more than one patch")
@@ -592,6 +616,9 @@ def main():
             else:
                 (status, output) = run_command_status(cmd)
                 print output
+
+        if options.finish and not options.dry and status == 0:
+            status = finish_branch(branch)
 
     print_exit_message(status, needs_update)
 
