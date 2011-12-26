@@ -46,7 +46,7 @@ _has_color = None
 def run_command(cmd, status=False, env={}):
     if VERBOSE:
         print "Running:", cmd
-    cmd_list = shlex.split(cmd)
+    cmd_list = shlex.split(str(cmd))
     newenv = os.environ
     newenv.update(env)
     p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
