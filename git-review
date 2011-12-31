@@ -16,7 +16,7 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-import optparse
+import argparse
 import urllib
 import json
 
@@ -541,41 +541,49 @@ to ensure proper behavior with gerrit. Thanks!
 def main():
 
     usage = "git review [OPTIONS] ... [BRANCH]"
-    parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-t", "--topic", dest="topic",
-                      help="Topic to submit branch to")
-    parser.add_option("-n", "--dry-run", dest="dry", action="store_true",
-                      help="Don't actually submit the branch for review")
-    parser.add_option("-r", "--remote", dest="remote",
-                      help="git remote to use for gerrit")
-    parser.add_option("-R", "--no-rebase", dest="rebase",
-                      action="store_false",
-                      help="Don't rebase changes before submitting.")
-    parser.add_option("-d", "--download", dest="download",
-                      help="Download the contents of an existing gerrit "
-                           "review into a branch")
-    parser.add_option("-u", "--update", dest="update", action="store_true",
-                      help="Force updates from remote locations")
-    parser.add_option("-s", "--setup", dest="setup", action="store_true",
-                      help="Just run the repo setup commands but don't "
-                           "submit anything")
-    parser.add_option("-f", "--finish", dest="finish", action="store_true",
-                      help="Close down this branch and switch back to "
-                           "master on successful submission")
-    parser.add_option("-y", "--yes", dest="yes", action="store_true",
-                      help="Indicate that you do, in fact, understand if you "
-                           "are submitting more than one patch")
-    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
-                      help="Output more information about what's going on")
-    parser.add_option("--version", dest="version", action="store_true",
-                      help="Print version number and exit")
-    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
-                        setup=False, version=False, yes=False, remote="gerrit")
+    parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
 
-    branch = "master"
-    (options, args) = parser.parse_args()
-    if len(args) > 0:
-        branch = args[0]
+    parser.add_argument("-t", "--topic", dest="topic",
+                        help="Topic to submit branch to")
+    parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
+                        help="Don't actually submit the branch for review")
+    parser.add_argument("-r", "--remote", dest="remote",
+                        help="git remote to use for gerrit")
+    parser.add_argument("-R", "--no-rebase", dest="rebase",
+                        action="store_false",
+                        help="Don't rebase changes before submitting.")
+    parser.add_argument("-d", "--download", dest="download",
+                        help="Download the contents of an existing gerrit "
+                             "review into a branch")
+    parser.add_argument("-u", "--update", dest="update", action="store_true",
+                        help="Force updates from remote locations")
+    parser.add_argument("-s", "--setup", dest="setup", action="store_true",
+                        help="Just run the repo setup commands but don't "
+                             "submit anything")
+    parser.add_argument("-f", "--finish", dest="finish", action="store_true",
+                        help="Close down this branch and switch back to "
+                             "master on successful submission")
+    parser.add_argument("-y", "--yes", dest="yes", action="store_true",
+                        help="Indicate that you do, in fact, understand if "
+                             "you are submitting more than one patch")
+    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
+                        help="Output more information about what's going on")
+    parser.add_argument("--license", dest="license", action="store_true",
+                        help="Print the license and exit")
+    parser.add_argument("--version", action="version",
+                        version='%s version %s' % \
+                        (os.path.split(sys.argv[0])[-1], version))
+    parser.add_argument("branch", nargs="?", default="master")
+    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
+                        setup=False, yes=False, remote="gerrit")
+
+    options = parser.parse_args()
+
+    if options.license:
+        print COPYRIGHT
+        sys.exit(0)
+
+    branch = options.branch
     global VERBOSE
     global UPDATE
     VERBOSE = options.verbose
@@ -583,11 +591,6 @@ def main():
     remote = options.remote
     yes = options.yes
     status = 0
-
-    if options.version:
-        print '%s, version %s' % (os.path.split(sys.argv[0])[-1], version)
-        print COPYRIGHT
-        sys.exit(0)
 
     needs_update = latest_is_newer()
     check_remote(remote)
