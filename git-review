@@ -95,17 +95,17 @@ def latest_is_newer():
     return False
 
 
-def set_hooks_commit_msg(remote):
-    """ Install the commit message hook if needed. """
-
+def get_hooks_target_file():
     top_dir = run_command('git rev-parse --show-toplevel')
     hooks_dir = os.path.join(top_dir, ".git/hooks")
-    target_file = os.path.join(hooks_dir, "commit-msg")
+    return os.path.join(hooks_dir, "commit-msg")
 
-    if os.path.exists(target_file) and os.access(target_file, os.X_OK):
-        return True
+
+def set_hooks_commit_msg(remote, target_file):
+    """ Install the commit message hook if needed. """
 
     # Create the hooks directory if it's not there already
+    hooks_dir = os.path.basename(target_file)
     if not os.path.isdir(hooks_dir):
         os.mkdir(hooks_dir)
 
@@ -131,8 +131,6 @@ def set_hooks_commit_msg(remote):
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
-
-    run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
 
     return True
 
@@ -371,7 +369,7 @@ def get_branch_name(target_branch):
     return _branch_name
 
 
-def assert_one_change(remote, branch, yes):
+def assert_one_change(remote, branch, yes, have_hook):
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
     if has_color:
@@ -392,11 +390,15 @@ def assert_one_change(remote, branch, yes):
         print output
         sys.exit(1)
     output_lines = len(output.split("\n"))
-    if output_lines == 0:
+    if output_lines == 1 and not have_hook:
+        print "Your change was committed before the commit hook was installed"
+        print "Ammending the commit to add a gerrit change id"
+        run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
+    elif output_lines == 0:
         print "No changes between HEAD and %s/%s." % (remote, branch)
         print "Submitting for review would be pointless."
         sys.exit(1)
-    if output_lines > 1:
+    elif output_lines > 1:
         if not yes:
             print "You have more than one commit that you are about to submit."
             print "The outstanding commits are:\n\n%s\n" % output
@@ -599,14 +601,19 @@ def main():
         if VERBOSE:
             print "Found topic '%s' from parsing changes." % topic
 
-        if not set_hooks_commit_msg(remote):
-            print_exit_message(1, needs_update)
+        hook_file = get_hooks_target_file()
+
+        have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+
+        if not have_hook:
+            if not set_hooks_commit_msg(remote, hook_file):
+                print_exit_message(1, needs_update)
 
         if not options.setup:
             if options.rebase:
                 if not rebase_changes(branch, remote):
                     print_exit_message(1, needs_update)
-            assert_one_change(remote, branch, yes)
+            assert_one_change(remote, branch, yes, have_hook)
 
             cmd = "git push %s HEAD:refs/for/%s/%s" % (remote, branch, topic)
             if options.dry:
