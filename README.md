@@ -67,6 +67,11 @@ Optional values: port
 * Unlike git config files there cannot be any whitespace before the name of the variable.
 * git-review will create a gerrit remote upon first run
 
+## Installation
+Install with pip install git-review
+
+For installation from source simply add git-review to your $PATH
+
 ## Contributing
 
 To get the latest code, see:
