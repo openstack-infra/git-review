@@ -74,13 +74,9 @@ For installation from source simply add git-review to your $PATH
 
 ## Contributing
 
-To get the latest code, see:
+To get the latest code, see: https://github.com/openstack-ci/git-review
 
-    https://github.com/openstack-ci/git-review
-
-Bugs are handled at:
-
-    https://launchpad.net/git-review
+Bugs are handled at: https://launchpad.net/git-review
 
 Code reviews are, as you might expect, handled by gerrit. The gerrit they
 use is http://review.openstack.org
