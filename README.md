@@ -50,6 +50,23 @@ If you just want to do the commit message and remote setup steps:
 
     git review -s
 
+## .gitreview file format
+Example .gitreview file (used to upload for git-review itself)
+
+    [gerrit]
+    host=review.openstack.org
+    port=29418
+    project=openstack-ci/git-review.git
+
+Required values: host, project
+
+Optional values: port
+
+### Notes
+* Username not required because it is requested on first run
+* Unlike git config files there cannot be any whitespace before the name of the variable.
+* git-review will create a gerrit remote upon first run
+
 ## Contributing
 
 To get the latest code, see:
