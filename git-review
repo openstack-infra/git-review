@@ -418,7 +418,7 @@ def get_topic(target_branch):
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
         return "/".join(branch_parts[2:])
 
-    log_output = run_command("git show --format='%s %b'")
+    log_output = run_command("git log HEAD^1..HEAD")
     bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
 
     match = re.search(bug_re, log_output)
