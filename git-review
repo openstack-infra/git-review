@@ -277,7 +277,7 @@ def check_color_support():
     return _has_color
 
 
-def check_remote(remote):
+def check_remote(branch, remote):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
     has_color = check_color_support()
@@ -290,7 +290,7 @@ def check_remote(remote):
 
         remotes = run_command("git branch -a %s" % color_never).split("\n")
         for current_remote in remotes:
-            if current_remote.strip() == "remotes/%s/master" % (remote) \
+            if current_remote.strip() == "remotes/%s/%s" % (remote, branch) \
                 and not UPDATE:
                 return
         # We have the remote, but aren't set up to fetch. Fix it
@@ -433,7 +433,7 @@ def get_topic(target_branch):
     return branch_name
 
 
-def download_review(review):
+def download_review(review, masterbranch):
 
     (hostname, team, username, port, project_name) = \
         parse_git_show("gerrit", "Push")
@@ -464,7 +464,7 @@ def download_review(review):
 
     try:
         topic = review_info['topic']
-        if topic == "master":
+        if topic == masterbranch:
             topic = review
     except KeyError:
         topic = review
@@ -593,10 +593,11 @@ def main():
     status = 0
 
     needs_update = latest_is_newer()
-    check_remote(remote)
+    check_remote(branch, remote)
 
     if options.download is not None:
-        print_exit_message(download_review(options.download), needs_update)
+        print_exit_message(download_review(options.download, branch),
+                           needs_update)
     else:
         topic = options.topic
         if topic is None:
