@@ -279,17 +279,19 @@ def check_color_support():
 
 def get_config():
     """Get the configuration options set in the .gitremote file, if present."""
-    """Returns a hashmap with hostname, port and project."""
+    """Returns a hashmap with hostname, port, project and defaultbranch."""
     """If there is no .gitremote file, default values will be used."""
-    config = dict(hostname=False, port='29418', project=False)
+    config = dict(hostname=False, port='29418', project=False,
+                  defaultbranch='master')
     top_dir = run_command('git rev-parse --show-toplevel')
     target_file = os.path.join(top_dir, ".gitreview")
     if os.path.exists(target_file):
-        configParser = ConfigParser.ConfigParser(dict(port='29418'))
+        configParser = ConfigParser.ConfigParser(config)
         configParser.read(target_file)
         config['hostname'] = configParser.get("gerrit", "host")
         config['port'] = configParser.get("gerrit", "port")
         config['project'] = configParser.get("gerrit", "project")
+        config['defaultbranch'] = configParser.get("gerrit", "defaultbranch")
     return config
 
 
@@ -581,7 +583,7 @@ def main():
     parser.add_argument("--version", action="version",
                         version='%s version %s' % \
                         (os.path.split(sys.argv[0])[-1], version))
-    parser.add_argument("branch", nargs="?", default="master")
+    parser.add_argument("branch", nargs="?", default=config['defaultbranch'])
     parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
                         setup=False, yes=False, remote="gerrit")
 

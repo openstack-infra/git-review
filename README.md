@@ -57,10 +57,11 @@ Example .gitreview file (used to upload for git-review itself)
     host=review.openstack.org
     port=29418
     project=openstack-ci/git-review.git
+    defaultbranch=master
 
 Required values: host, project
 
-Optional values: port
+Optional values: port (default: 29418), defaultbranch (default: master)
 
 ### Notes
 * Username not required because it is requested on first run
