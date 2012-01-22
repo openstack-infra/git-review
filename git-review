@@ -392,7 +392,7 @@ def assert_one_change(remote, branch, yes, have_hook):
     output_lines = len(output.split("\n"))
     if output_lines == 1 and not have_hook:
         print "Your change was committed before the commit hook was installed"
-        print "Ammending the commit to add a gerrit change id"
+        print "Amending the commit to add a gerrit change id"
         run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
     elif output_lines == 0:
         print "No changes between HEAD and %s/%s." % (remote, branch)
