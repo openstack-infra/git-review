@@ -16,7 +16,6 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-import argparse
 import urllib
 import json
 
@@ -550,6 +549,8 @@ def main():
     config = get_config()
 
     usage = "git review [OPTIONS] ... [BRANCH]"
+
+    import argparse
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
 
     parser.add_argument("-t", "--topic", dest="topic",
