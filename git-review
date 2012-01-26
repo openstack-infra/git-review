@@ -554,6 +554,8 @@ def main():
 
     parser.add_argument("-t", "--topic", dest="topic",
                         help="Topic to submit branch to")
+    parser.add_argument("-D", "--draft", dest="draft", action="store_true",
+                        help="Submit review as a draft")
     parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
                         help="Don't actually submit the branch for review")
     parser.add_argument("-r", "--remote", dest="remote",
@@ -583,8 +585,8 @@ def main():
                         version='%s version %s' % \
                         (os.path.split(sys.argv[0])[-1], version))
     parser.add_argument("branch", nargs="?", default=config['defaultbranch'])
-    parser.set_defaults(dry=False, rebase=True, verbose=False, update=False,
-                        setup=False, yes=False, remote="gerrit")
+    parser.set_defaults(dry=False, draft=False, rebase=True, verbose=False,
+                        update=False, setup=False, yes=False, remote="gerrit")
 
     options = parser.parse_args()
 
@@ -629,7 +631,15 @@ def main():
                     print_exit_message(1, needs_update)
             assert_one_change(remote, branch, yes, have_hook)
 
-            cmd = "git push %s HEAD:refs/for/%s/%s" % (remote, branch, topic)
+            # NOTE (kiall): Change to "publish" after 2.2.2 is deployed,
+            #               before refs/for/ is deprecated
+            ref = "for"
+
+            if options.draft:
+                ref = "draft"
+
+            cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
+                                                      topic)
             if options.dry:
                 print "Please use the following command " \
                       "to send your commits to review:\n"
