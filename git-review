@@ -35,6 +35,7 @@ version = "1.12"
 VERBOSE = False
 UPDATE = False
 CONFIGDIR = os.path.expanduser("~/.config/git-review")
+GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 
@@ -82,6 +83,14 @@ def update_latest_version(version_file_path):
 
 def latest_is_newer():
     """ Check if there is a new version of git-review. """
+
+    # Skip version check if distro package turns it off
+    if os.path.exists(GLOBAL_CONFIG):
+        config = dict(check=False)
+        configParser = ConfigParser.ConfigParser(config)
+        configParser.read(GLOBAL_CONFIG)
+        if not configParser.getboolean("updates", "check"):
+            return False
 
     version_file_path = os.path.join(CONFIGDIR, "latest-version")
     update_latest_version(version_file_path)
