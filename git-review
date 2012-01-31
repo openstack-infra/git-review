@@ -388,9 +388,11 @@ def assert_one_change(remote, branch, yes, have_hook):
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
     if has_color:
-        color = git_config_get_value("color", "ui")
-        if color == "":
+        color = git_config_get_value("color", "ui").lower()
+        if(color == "" or color == "true"):
             color = "auto"
+        elif color == "false":
+            color = "never"
         elif color == "auto":
             # Python is not a tty, we have to force colors
             color = "always"
