@@ -113,7 +113,7 @@ def set_hooks_commit_msg(remote, target_file):
     """ Install the commit message hook if needed. """
 
     # Create the hooks directory if it's not there already
-    hooks_dir = os.path.basename(target_file)
+    hooks_dir = os.path.dirname(target_file)
     if not os.path.isdir(hooks_dir):
         os.mkdir(hooks_dir)
 
