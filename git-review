@@ -23,6 +23,7 @@ from distutils.version import StrictVersion
 from urlparse import urlparse
 import ConfigParser
 
+import datetime
 import os
 import sys
 import time
@@ -45,7 +46,7 @@ _has_color = None
 
 def run_command(cmd, status=False, env={}):
     if VERBOSE:
-        print "Running:", cmd
+        print datetime.datetime.now(), "Running:", cmd
     cmd_list = shlex.split(str(cmd))
     newenv = os.environ
     newenv.update(env)
