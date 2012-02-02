@@ -34,40 +34,6 @@ class git_review_install(install):
 
 git_review_cmdclass = {'install': git_review_install}
 
-
-def parse_requirements(file_name):
-    requirements = []
-    if os.path.exists(file_name):
-        for line in open(file_name, 'r').read().split('\n'):
-            if re.match(r'(\s*#)|(\s*$)', line):
-                continue
-            if re.match(r'\s*-e\s+', line):
-                requirements.append(re.sub(r'\s*-e\s+.*#egg=(.*)$', r'\1',
-                                    line))
-            elif re.match(r'\s*-f\s+', line):
-                pass
-            else:
-                requirements.append(line)
-
-    return requirements
-
-
-def parse_dependency_links(file_name):
-    dependency_links = []
-    if os.path.exists(file_name):
-        for line in open(file_name, 'r').read().split('\n'):
-            if re.match(r'\s*-[ef]\s+', line):
-                dependency_links.append(re.sub(r'\s*-[ef]\s+', '', line))
-    return dependency_links
-
-venv = os.environ.get('VIRTUAL_ENV', None)
-if venv is not None:
-    with open("requirements.txt", "w") as req_file:
-        output = subprocess.Popen(["pip", "-E", venv, "freeze", "-l"],
-                                  stdout=subprocess.PIPE)
-        requirements = output.communicate()[0].strip()
-        req_file.write(requirements)
-
 setup(
     name='git-review',
     version=version,
@@ -81,6 +47,5 @@ setup(
     url='https://launchpad.net/git-review',
     scripts=['git-review'],
     data_files=[('share/man/man1', ['git-review.1'])],
-    install_requires=parse_requirements('requirements.txt'),
-    dependency_links=parse_dependency_links('requirements.txt'),
+    install_requires=['argparse'],
     )
