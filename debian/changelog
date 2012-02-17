@@ -1,0 +1,286 @@
+git-review (1.14-1) oneiric; urgency=low
+
+  ** SNAPSHOT build @f719a31954cf064914a03b0cb443e44f6a41d370 **
+
+  [ Monty Taylor ]
+  * [f719a319] Actually fix the urlparse bug in OSX.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 17 Feb 2012 00:01:09 +0000
+
+git-review (2.6.8+20120211~0001-0mit1~26.gbpe0e1b8) oneiric; urgency=low
+
+  ** SNAPSHOT build @e0e1b871380fb99e3324f96c9103f5eb21226249 **
+
+  [ Monty Taylor ]
+  * [32047ab9] Start dev on 1.14.
+  * [21ae3f3d] Fix an obvious breakage on OSX.
+  * [e0e1b871] Start dev on 1.15.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Sat, 11 Feb 2012 00:01:10 +0000
+
+git-review (2.6.8+20120210~0001-0mit1~25.gbp350909) oneiric; urgency=low
+
+  ** SNAPSHOT build @350909c915a9413ffcd171e7da454cdaf0bcd04f **
+
+  [ Monty Taylor ]
+  * [350909c9] Workaround for OSX urlparse issue.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 10 Feb 2012 00:01:16 +0000
+
+git-review (2.6.8+20120207~0001-0mit1~24.gbp19955a) oneiric; urgency=low
+
+  ** SNAPSHOT build @19955a536e1adecda8406871511a0f8907382173 **
+
+  [ Michael Still ]
+  * [19955a53] Include timing info in verbose output
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Tue, 07 Feb 2012 00:01:09 +0000
+
+git-review (2.6.8+20120203~0001-0mit1~23.gbpc07da9) oneiric; urgency=low
+
+  ** SNAPSHOT build @c07da92ad1d227f56af49b0e895b9e0c5b5820c9 **
+
+  [ Monty Taylor ]
+  * [c07da92a] Remove automagic requirements.txt.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 03 Feb 2012 00:01:10 +0000
+
+git-review (2.6.8+20120202~0001-0mit1~22.gbpff3d50) oneiric; urgency=low
+
+  ** SNAPSHOT build @ff3d506aea79a446e5438bc8691b09a3deea4acb **
+
+  [ James E. Blair ]
+  * [ff3d506a] Use dirname instead of basename.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Thu, 02 Feb 2012 00:01:08 +0000
+
+git-review (2.6.8+20120201~0001-0mit1~21.gbp3d6675) oneiric; urgency=low
+
+  ** SNAPSHOT build @3d6675958f0423d99164927c1d941f38ef6308e7 **
+
+  [ Monty Taylor ]
+  * [62e14dc7] Started 1.13.
+
+  [ Antoine Musso ]
+  * [3d667595] accepts color.ui boolean values
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 01 Feb 2012 00:01:09 +0000
+
+git-review (2.6.8+20120131~0001-0mit1~20.gbpe85296) oneiric; urgency=low
+
+  ** SNAPSHOT build @e8529608fd8bf7a7261a47f302448a0dc3c088c1 **
+
+  [ Monty Taylor ]
+  * [284871b6] Freeze requirements for sdist packages.
+  * [e8529608] Provide easy flag for disabling update check.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Tue, 31 Jan 2012 00:01:15 +0000
+
+git-review (2.6.8+20120128~0001-0mit1~19.gbpf8e5df) oneiric; urgency=low
+
+  ** SNAPSHOT build @f8e5df11f423e26542134eb7f08520a8f6fafe09 **
+
+  [ Kiall Mac Innes ]
+  * [9850b4d6] Add support for Gerrit 2.2.2's "Draft" status
+
+  [ Catrope ]
+  * [49ed14c1] Add myself to AUTHORS
+
+  [ Diederik ]
+  * [06b45ccb] Added dependencies in requirements.txt
+
+  [ Monty Taylor ]
+  * [3cf55f98] Added tox support for testing pep8.
+  * [fe4a5c82] Start 1.11.
+  * [f8e5df11] Start 1.12.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Sat, 28 Jan 2012 00:01:14 +0000
+
+git-review (2.6.8+20120126~0001-0mit1~17.gbpca006c) oneiric; urgency=low
+
+  ** SNAPSHOT build @ca006c3a4838f6ce6d1f5035a37840eb7bc84bf0 **
+
+  [ Catrope ]
+  * [6628889d] Fix typo (Ammending -> Amending)
+  * [360156f1] Don't hardcode 'master'
+  * [48c6f5a7] Break out the config reading into its own method
+  * [fc2e03f7] Make the default branch configurable
+  * [ca006c3a] Remove useless username parameter from add_remote
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Thu, 26 Jan 2012 00:01:24 +0000
+
+git-review (2.6.8+20120112~1957-0mit1~16.gbpd74e40) oneiric; urgency=low
+
+  ** SNAPSHOT build @d74e4054e79205d6ab855fcdb19c15749ad26929 **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Thu, 12 Jan 2012 19:58:02 +0000
+
+git-review (2.6.8+20120111~0001-0mit1~15.gbpd74e40) oneiric; urgency=low
+
+  ** SNAPSHOT build @d74e4054e79205d6ab855fcdb19c15749ad26929 **
+
+  [ James E. Blair ]
+  * [d74e4054] Switch from 'git show' to 'git log'.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 11 Jan 2012 00:01:09 +0000
+
+git-review (2.6.8+20120109~0000-0mit1~14.gbp405d6c) oneiric; urgency=low
+
+  ** SNAPSHOT build @405d6cc3fb558f0886d65d5a1e928663b5655b13 **
+
+  [ Monty Taylor ]
+  * [405d6cc3] Migrate to argparse. optparse is deprecated.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Mon, 09 Jan 2012 00:00:59 +0000
+
+git-review (2.6.8+20120106~0000-0mit1~13.gbpa154a7) oneiric; urgency=low
+
+  ** SNAPSHOT build @a154a78dcd0704217a019b124f639da501a8c923 **
+
+  [ Jason Axelson ]
+  * [3b4a2252] Add .gitreview instructions to readme
+  * [ca508535] Clarify instructions for contributing
+  * [a1209985] Add installation instructions to readme
+  * [a154a78d] Make readme links clickable
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 06 Jan 2012 00:00:39 +0000
+
+git-review (2.6.8+20120104~0001-0mit1~12.gbp6be092) oneiric; urgency=low
+
+  ** SNAPSHOT build @6be09239022723e14e16981c58b62926332a275e **
+
+  [ Monty Taylor ]
+  * [a28af319] Remove commit --amend from hook installation.
+  * [6be09239] Post 1.9 release version bump.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 04 Jan 2012 00:01:47 +0000
+
+git-review (2.6.8+20111227~0000-0mit1~11.gbp2dceb4) oneiric; urgency=low
+
+  ** SNAPSHOT build @2dceb4aa115da83f3fcbb4d020ad919a5ba1724f **
+
+  [ Monty Taylor ]
+  * [e84c6f9e] Add --finish option to git-review.
+
+  [ James E. Blair ]
+  * [d97ffdd9] Only pass plain strings to shlex.split.
+
+  [ Monty Taylor ]
+  * [54a5ce0b] Document the new command line options.
+  * [f8705af4] Prep for release of 1.8.
+  * [2dceb4aa] Bump version post release.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Tue, 27 Dec 2011 00:00:30 +0000
+
+git-review (2.6.8+20111223~0001-0mit1~10.gbpb26118) oneiric; urgency=low
+
+  ** SNAPSHOT build @b26118cabb94a51774d4ca8b319279a9ef302d4f **
+
+  [ Monty Taylor ]
+  * [7d6213e1] Install hook via scp rather than http.
+  * [2545e433] Add workaround for broken urlparse.
+  * [d2f9932b] Remove the commands module and use subprocess.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 23 Dec 2011 00:01:06 +0000
+
+git-review (2.6.8+20111220~0001-0mit1~9.gbp0f0b00) oneiric; urgency=low
+
+  ** SNAPSHOT build @0f0b0042a9e835e8389e07e8e180271fdb6cfee1 **
+
+  [ Monty Taylor ]
+  * [0f0b0042] Use specified remote for getting commit hook.
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Tue, 20 Dec 2011 00:01:17 +0000
+
+git-review (2.6.8+20111208~0001-0mit1~8.gbpd40481) oneiric; urgency=low
+
+  ** SNAPSHOT build @d40481b190e85cb4775500c467416216c05193a6 **
+
+  [ Lorin Hochstein ]
+  * [d40481b1] Fix bug 901030
+
+  [ Managed I.T. CI ]
+
+ -- Managed I.T. CI <ci@managedit.ie>  Thu, 08 Dec 2011 00:01:45 +0000
+
+git-review (2.6.8+20111202~1852-0mit1~7.gbpd1715b) oneiric; urgency=low
+
+  ** SNAPSHOT build @d1715ba387654e7fc6fd714460144df8abf2aaba **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 02 Dec 2011 18:52:12 +0000
+
+git-review (2.6.8+20111202~1849-0mit1~6.gbpd1715b) oneiric; urgency=low
+
+  ** SNAPSHOT build @d1715ba387654e7fc6fd714460144df8abf2aaba **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Fri, 02 Dec 2011 18:49:39 +0000
+
+git-review (2.6.8+20111130~2322-0mit1~5.gbpd1715b) oneiric; urgency=high
+
+  ** SNAPSHOT build @d1715ba387654e7fc6fd714460144df8abf2aaba **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 30 Nov 2011 23:22:11 +0000
+
+git-review (2.6.8+20111130~2317-0mit1~4.gbpd1715b) oneiric; urgency=high
+
+  ** SNAPSHOT build @d1715ba387654e7fc6fd714460144df8abf2aaba **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 30 Nov 2011 23:17:51 +0000
+
+git-review (1.7+20111130~2314-0mit1~2.gbpd1715b) oneiric; urgency=high
+
+  ** SNAPSHOT build @d1715ba387654e7fc6fd714460144df8abf2aaba **
+
+  * UNRELEASED
+
+ -- Managed I.T. CI <ci@managedit.ie>  Wed, 30 Nov 2011 23:14:29 +0000
+
+git-review (1.7-0mit1) oneiric; urgency=high
+
+  * Initial packaging
+
+ -- Kiall Mac Innes <kiall@managedit.ie>  Wed, 30 Nov 2011 23:06:19 +0000

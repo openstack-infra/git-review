@@ -31,7 +31,7 @@ import re
 import shlex
 import subprocess
 
-version = "1.15"
+version = "1.14"
 
 VERBOSE = False
 UPDATE = False
@@ -220,8 +220,11 @@ def split_hostname(fetch_url):
     port = 22
 
     # Workaround bug in urlparse on OSX
-    if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
-        hostname = parsed_url.path[2:].split("/")[0]
+    if parsed_url.scheme == "ssh" and hostname[:2] == "//":
+        hostname = hostname[2:].split("/")[0]
+    # Workaround bug in urlparse on OSX
+    elif parsed_url.scheme == "ssh" and hostname[:2] == "//":
+        hostname = hostname[2:].split("/")[0]
 
     if "@" in hostname:
         (username, hostname) = hostname.split("@")
