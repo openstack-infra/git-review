@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: git-review
+Version: 1.14
+Summary: Tool to submit code to Gerrit
+Home-page: https://launchpad.net/git-review
+Author: OpenStack, LLC.
+Author-email: openstack@lists.launchpad.net
+License: Apache License (2.0)
+Description: UNKNOWN
+Keywords: git gerrit review
+Platform: UNKNOWN
+Classifier: Programming Language :: Python
