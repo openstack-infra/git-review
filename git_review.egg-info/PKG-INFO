@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: git-review
-Version: 1.14
+Version: 1.15
 Summary: Tool to submit code to Gerrit
 Home-page: https://launchpad.net/git-review
 Author: OpenStack, LLC.
