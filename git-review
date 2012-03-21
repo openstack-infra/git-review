@@ -44,6 +44,12 @@ _branch_name = None
 _has_color = None
 
 
+class colors:
+    yellow = '\033[33m'
+    green = '\033[92m'
+    reset = '\033[0m'
+
+
 def run_command(cmd, status=False, env={}):
     if VERBOSE:
         print datetime.datetime.now(), "Running:", cmd
@@ -436,6 +442,56 @@ def get_topic(target_branch):
     return branch_name
 
 
+def list_reviews(remote):
+
+    (hostname, team, username, port, project_name) = \
+        parse_git_show(remote, "Push")
+
+    ssh_cmds = ["ssh"]
+    if port is not None:
+        ssh_cmds.extend(["-p", port])
+    if username is not None:
+        ssh_cmds.extend(["-l", username])
+    ssh_cmd = " ".join(ssh_cmds)
+
+    query_string = "--format=JSON project:%s status:open" % project_name
+    review_info = None
+    (status, output) = run_command_status("%s %s gerrit query %s"
+                                          % (ssh_cmd, hostname, query_string))
+
+    if status != 0:
+        print "Could not fetch review information from gerrit"
+        print output
+        return status
+
+    for line in output.split("\n"):
+        # Warnings from ssh wind up in this output
+        if line[0] != "{":
+            print line
+            continue
+        try:
+            review_info = json.loads(line)
+        except:
+            if VERBOSE:
+                print output
+            print "Could not parse json query response:", sys.exc_info()[1]
+            return 1
+
+        if 'type' in review_info:
+            print "Found %d items for review" % review_info['rowCount']
+            break
+
+        change = review_info['number']
+        branch = review_info['branch']
+        subject = review_info['subject']
+        if check_color_support():
+            change = colors.yellow + change + colors.reset
+            branch = colors.green + branch + colors.reset
+        print "%s  %s  %s" % (change, branch, subject)
+
+    return 0
+
+
 def download_review(review, masterbranch, remote):
 
     (hostname, username, port, project_name) = \
@@ -581,6 +637,8 @@ def main():
     parser.add_argument("-f", "--finish", dest="finish", action="store_true",
                         help="Close down this branch and switch back to "
                              "master on successful submission")
+    parser.add_argument("-l", "--list", dest="list", action="store_true",
+                        help="list available reviews for the current project")
     parser.add_argument("-y", "--yes", dest="yes", action="store_true",
                         help="Indicate that you do, in fact, understand if "
                              "you are submitting more than one patch")
@@ -598,6 +656,7 @@ def main():
         verbose=False,
         update=False,
         setup=False,
+        list=False,
         yes=False,
         remote=config['defaultremote'])
 
@@ -623,6 +682,8 @@ def main():
     if options.download is not None:
         print_exit_message(download_review(options.download, branch, remote),
                            needs_update)
+    elif options.list:
+        print_exit_message(list_reviews(remote), needs_update)
     else:
         topic = options.topic
         if topic is None:
