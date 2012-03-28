@@ -1,5 +1,5 @@
 Development of git-review is managed by OpenStack's Gerrit, which can be
-found at https://review.openstack.org
+found at https://review.openstack.org/
 
 Instructions on submitting patches can be found at
 http://wiki.openstack.org/GerritWorkflow
