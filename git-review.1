@@ -10,6 +10,7 @@
 .Fl d Ar change
 .Op Ar branch
 .Nm
+.Op Fl r Ar remote
 .Op Fl fnuv
 .Fl s
 .Op Ar branch
@@ -79,22 +80,27 @@ project=\fIproject name\fP
 defaultbranch=\fIbranch to work on\fP
 .Ed
 .Pp
-An example config file for a project
-.Pa department/project
-hosted on
-.Cm review.example.com
-port
-.Cm 29418
-in the branch
-.Cm master
-:
+It is also possible to specify optional default name for 
+the Git remote using the
+.Cm defaultremote
+configuration parameter. 
+.Pp
+Setting
+.Cm defaultrebase
+to zero will make
+.Nm
+not to rebase changes by default (same as the 
+.Fl R
+command line option)
 .Bd -literal -offset indent
 [gerrit]
 host=review.example.com
 port=29418
 project=department/project.git
 defaultbranch=master
-.Ed
+defaultremote=review
+defaultrebase=0
+
 .Sh EXAMPLES
 To fetch a remote change number 3004:
 
@@ -121,6 +127,25 @@ Switched to branch 'master'
 Deleted branch 'review/someone/topic_name'
 $ git branch
 * master
+.Ed
+.Pp
+An example 
+.Pa .gitreview
+configuration file for a project
+.Pa department/project
+hosted on
+.Cm review.example.com
+port
+.Cm 29418
+in the branch
+.Cm master
+:
+.Bd -literal -offset indent
+[gerrit]
+host=review.example.com
+port=29418
+project=department/project.git
+defaultbranch=master
 .Ed
 .Sh BUGS
 Bug reports can be submitted to
