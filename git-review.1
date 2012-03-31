@@ -1,143 +1,104 @@
-.TH "GIT-REVIEW" "1" "March 27, 2012" "2012.03" "git-review"
-.SH NAME
-git-review \- Submit changes to Gerrit for review
-.
-.nr rst2man-indent-level 0
-.
-.de1 rstReportMargin
-\\$1 \\n[an-margin]
-level \\n[rst2man-indent-level]
-level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
--
-\\n[rst2man-indent0]
-\\n[rst2man-indent1]
-\\n[rst2man-indent2]
-..
-.de1 INDENT
-.\" .rstReportMargin pre:
-. RS \\$1
-. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
-. nr rst2man-indent-level +1
-.\" .rstReportMargin post:
-..
-.de UNINDENT
-. RE
-.\" indent \\n[an-margin]
-.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
-.nr rst2man-indent-level -1
-.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
-.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
-..
-.\" Man page generated from reStructeredText.
-.
-.SH SYNOPSIS
-.sp
-\fBgit\-review\fP [\fIOPTIONS <git\-review\-options\-label\fP] [\fIBRANCH\fP]
-.SH DESCRIPTION
-.sp
-\fBgit\-review\fP automates and streamlines some of the tasks involved with
-submitting local changes to a \fIGerrit\fP server for review.
-.sp
-This command usually makes it much easier to apprehend Gerrit, especially for users already had to move to git from another SCM.
-.SH OPTIONS
-.INDENT 0.0
-.TP
-.B \-\-topic, \-t
-.sp
-Sets the target topic for this change on the gerrit server. By default, will
-use the bug number in the commit summary if any is present and fallback to use
-the local branch name whenever it is different from the remote branch.
-.TP
-.B \-\-draft, \-D
-.sp
-Submit review as a draft (Gerrit 2.3).
-.TP
-.B \-\-dry\-run, \-n
-.sp
-Don\(aqt actually perform any commands that have direct effects. Print them
-instead.
-.TP
-.B \-\-remote, \-r
-.sp
-git remote to use for gerrit
-.TP
-.B \-\-no\-rebase, \-R
-.sp
-Do not automatically perform a rebase before submitting the change to
-gerrit.
-
-When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid avoid possible conflicts.
-When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This will surely confuse many reviewers that would expect to see a much simpler difference.
-.TP
-.B \-\-download, \-d
-.sp
-Review id to download patch from Gerrit into a local branch. The branch will be named according to the upstream patch author and topic branch name.
-.TP
-.B \-\-update, \-u
-.sp
-Skip cached local copies and force updates from network resources.
-.TP
-.B \-\-setup, \-s
-.sp
-Just run the repo setup commands but don\(aqt submit anything
-.TP
-.B \-\-finish, \-f
-.sp
+.Dd October 27, 2011
+.Dt GIT-REVIEW 1
+.Sh NAME
+.Nm git-review
+.Nd Submit changes to Gerrit for review
+.Sh SYNOPSIS
+.Nm
+.Op Fl r Ar remote
+.Op Fl uv
+.Fl d Ar change
+.Op Ar branch
+.Nm
+.Op Fl fnuv
+.Fl s
+.Op Ar branch
+.Nm
+.Op Fl fnuvDR
+.Op Fl r Ar remote
+.Op Fl t Ar topic
+.Op Ar branch
+.Nm
+.Fl -version
+.Sh DESCRIPTION
+.Nm
+automates and streamlines some of the tasks involved with
+submitting local changes to a Gerrit server for review. It is
+designed to make it easier to apprehend Gerrit, especially for
+users that have recently switched to Git from another version
+control system.
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl d Ar change , Fl -download= Ns Ar change
+Download Ar change from 
+.I Gerrit
+into a local branch. The branch will be named after the patch author and the name of a topic.
+.It Fl f , Fl -finish
 Close down the local branch and switch back to the target branch on
 successful submission.
-.TP
-.B \-\-yes, \-y
-.sp
+.It Fl n , Fl -dry-run
+Don\(aqt actually perform any commands that have direct effects. Print them
+instead.
+.It Fl r Ar remote , Fl -remote= Ns Ar remote
+Git remote to use for Gerrit
+.It Fl s , Fl -setup
+Just run the repo setup commands but don\(aqt submit anything
+.It Fl t Ar topic , Fl -topic= Ns Ar topic
+Sets the target topic for this change on the gerrit server.
+If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
+.It Fl u , Fl -update
+Skip cached local copies and force updates from network resources.
+.It Fl y , Fl -yes
 Indicate that you do, in fact, understand if you are submitting more than
 one patch.
-.TP
-.B \-\-verbose, \-v
-.sp
-Turns on more verbose output such as git commands being executed.
-.TP
-.B \-\-version
-.sp
+.It Fl v Fl -verbose
+Turns on more verbose output.
+.It Fl D , Fl -draft
+Submit review as a draft. Requires Gerrit 2.3 or newer. 
+.It Fl R , Fl -no-rebase
+Do not automatically perform a rebase before submitting the change to
+Gerrit. 
+When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
+
+.It Fl -version
 Print the version number and exit.
-.UNINDENT
-.SH PROJECT CONFIGURATION
-.sp
-To use git\-review with your project, it is recommended that you create
-a file at the root of the repository named ".gitreview". This file should
-contains informations to help git-review interact with your Gerrit
-installation. The format is similar to the popular .ini format:
-.sp
-.nf
-.ft C
+.El
+.Sh FILES
+To use 
+.Nm
+with your project, it is recommended that you create
+a file at the root of the repository named
+.Pa .gitreview
+and place information about your gerrit installation in it.  The format is similar to the Windows .ini file format:
+.Bd -literal -offset indent
 [gerrit]
-host=<gerrit hostname>
-port=<gerrit TCP port>
-project=<project name>
-defaultbranch=<branch>
-.sp
-.ft P
-.fi
-As an example for a project named departement/project hosted on review.example.com port 29418 and using branch "master":
-.sp
-.nf
-.ft C
+host=\fIhostname\fP
+port=\fITCP port number of gerrit\fP
+project=\fIproject name\fP
+defaultbranch=\fIbranch to work on\fP
+.Ed
+.Pp
+An example config file for a project
+.Pa department/project
+hosted on
+.Cm review.example.com
+port
+.Cm 29418
+in the branch
+.Cm master
+:
+.Bd -literal -offset indent
 [gerrit]
 host=review.example.com
 port=29418
-project=departement/project.git
+project=department/project.git
 defaultbranch=master
-.ft P
-.fi
-.re
+.Ed
+.Sh EXAMPLES
+To fetch a remote change number 3004:
 
-
-.SH EXAMPLES
-
-.SS Fetching:
-
-To fetch a remote change numbered 3004:
-.sp
-.RS 4
-.nf
+.Bd -literal -offset indent
 $ git-review -d 3004
 Downloading refs/changes/04/3004/1 from gerrit into
 review/someone/topic_name
@@ -145,17 +106,13 @@ Switched to branch 'review/someone/topic_name
 $ git branch
   master
 * review/author/topic_name
-$
-.fi
-.RE
-.sp
-Notice how git-review looks up both the author and Gerrit topic branch to name the branch created locally. It makes things easier to track locally.
-.SS Publishing change:
-.sp
-Following the previous example (fetching), here how to send a change for review while deleting the associated local branch:
-.sp
-.RS 4
-.nf
+.Ed
+
+Gerrit looks up both name of the author and the topic name from Gerrit
+to name a local branch. This facilitates easier identification of changes.
+.Pp
+To send a change for review and delete local branch afterwards:
+.Bd -literal -offset indent
 $ git-review -f
 remote: Resolving deltas:   0% (0/8)
 To ssh://username@review.example.com/departement/project.git
@@ -164,15 +121,15 @@ Switched to branch 'master'
 Deleted branch 'review/someone/topic_name'
 $ git branch
 * master
-$
-.fi
-.RE
-.SH AUTHOR
-git-review is maintained by OpenStack, LLC
-.SH REPORTING BUGS
-https://launchpad.net/git-review
-.SH COPYRIGHT
-2011-2012, OpenStack, LLC
-.\" Generated by docutils manpage writer.
-.\"
-.
+.Ed
+.Sh BUGS
+Bug reports can be submitted to
+.Lk https://launchpad.net/git-review
+.Sh AUTHORS
+.Nm
+is maintained by
+.An "OpenStack, LLC"
+.Pp
+This manpage has been enhanced by
+.An "Antoine Musso" Aq hashar@free.fr
+.An "Marcin Cieslak" Aq saper@saper.info
