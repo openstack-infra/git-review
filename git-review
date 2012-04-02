@@ -477,9 +477,17 @@ def download_review(review, masterbranch, remote):
         print "Could not fetch review information from gerrit"
         print output
         return status
-    try:
-        review_info = json.loads(output.split("\n")[0])
-    except:
+    review_jsons = output.split("\n")
+    found_review = False
+    for review_json in review_jsons:
+        try:
+            review_info = json.loads(review_json)
+            found_review = True
+        except:
+            pass
+        if found_review:
+            break
+    if not found_review:
         if VERBOSE:
             print output
         print "Could not find a gerrit review with id: %s" % review
