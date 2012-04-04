@@ -1,4 +1,6 @@
-.Dd October 27, 2011
+.\" Uses mdoc(7). See `man 7 mdoc` for details about the syntax used here
+.\"
+.Dd April 4th, 2012
 .Dt GIT-REVIEW 1
 .Sh NAME
 .Nm git-review
@@ -32,8 +34,9 @@ control system.
 The following options are available:
 .Bl -tag -width indent
 .It Fl d Ar change , Fl -download= Ns Ar change
-Download Ar change from 
-.I Gerrit
+Download
+.Ar change
+from Gerrit
 into a local branch. The branch will be named after the patch author and the name of a topic.
 .It Fl f , Fl -finish
 Close down the local branch and switch back to the target branch on
@@ -42,9 +45,9 @@ successful submission.
 Don\(aqt actually perform any commands that have direct effects. Print them
 instead.
 .It Fl r Ar remote , Fl -remote= Ns Ar remote
-Git remote to use for Gerrit
+Git remote to use for Gerrit.
 .It Fl s , Fl -setup
-Just run the repo setup commands but don\(aqt submit anything
+Just run the repo setup commands but don\(aqt submit anything.
 .It Fl t Ar topic , Fl -topic= Ns Ar topic
 Sets the target topic for this change on the gerrit server.
 If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
@@ -56,12 +59,12 @@ one patch.
 .It Fl v Fl -verbose
 Turns on more verbose output.
 .It Fl D , Fl -draft
-Submit review as a draft. Requires Gerrit 2.3 or newer. 
+Submit review as a draft. Requires Gerrit 2.3 or newer.
 .It Fl R , Fl -no-rebase
 Do not automatically perform a rebase before submitting the change to
-Gerrit. 
-When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
+Gerrit.
 
+When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
 .It Fl -version
 Print the version number and exit.
 .El
@@ -155,6 +158,6 @@ Bug reports can be submitted to
 is maintained by
 .An "OpenStack, LLC"
 .Pp
-This manpage has been enhanced by
+This manpage has been enhanced by:
 .An "Antoine Musso" Aq hashar@free.fr
 .An "Marcin Cieslak" Aq saper@saper.info
