@@ -300,11 +300,12 @@ def get_config():
         config['port'] = configParser.get("gerrit", "port")
         config['project'] = configParser.get("gerrit", "project")
         config['defaultbranch'] = configParser.get("gerrit", "defaultbranch")
-    if configParser.has_option("gerrit", "defaultremote"):
-        config['defaultremote'] = configParser.get("gerrit", "defaultremote")
-    if configParser.has_option("gerrit", "defaultrebase"):
-        config['defaultrebase'] = configParser.getboolean("gerrit",
-            "defaultrebase")
+        if configParser.has_option("gerrit", "defaultremote"):
+            config['defaultremote'] = configParser.get("gerrit",
+                                                       "defaultremote")
+        if configParser.has_option("gerrit", "defaultrebase"):
+            config['defaultrebase'] = configParser.getboolean("gerrit",
+                                                              "defaultrebase")
     return config
 
 
