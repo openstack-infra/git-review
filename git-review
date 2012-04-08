@@ -212,12 +212,24 @@ def add_remote(hostname, port, project, remote):
         print
 
 
-def split_hostname(fetch_url):
+def parse_git_show(remote, verb):
+    fetch_url = ""
+    for line in run_command("git remote show -n %s" % remote).split("\n"):
+        if line.strip().startswith("%s" % verb):
+            fetch_url = line.split()[2]
 
     parsed_url = urlparse(fetch_url)
-    username = None
+    project_name = parsed_url.path.lstrip("/")
+    if project_name.endswith(".git"):
+        project_name = project_name[:-4]
+
     hostname = parsed_url.netloc
-    port = 22
+    team = None
+    username = None
+    port = parsed_url.port
+
+    if VERBOSE:
+        print "Found origin %s URL:" % verb, fetch_url
 
     # Workaround bug in urlparse on OSX
     if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
@@ -229,42 +241,14 @@ def split_hostname(fetch_url):
         (hostname, port) = hostname.split(":")
 
     # Is origin an ssh location? Let's pull more info
-    if parsed_url.scheme == "ssh":
-        return (username, hostname, port)
-    else:
-        return (None, hostname, None)
+    if parsed_url.scheme == "ssh" and port == None:
+        port = 22
 
+    team = project_name.split("/")[-2]
+    if team.startswith("git@github.com"):
+        team = team.split(':')[1]
 
-def parse_git_show(remote, verb):
-    fetch_url = ""
-    for line in run_command("git remote show -n %s" % remote).split("\n"):
-        if line.strip().startswith("%s" % verb):
-            fetch_url = ":".join(line.split(":")[1:]).strip()
-
-    project_name = fetch_url.split("/")[-1]
-    if project_name.endswith(".git"):
-        project_name = project_name[:-4]
-
-    hostname = None
-    team = None
-    username = None
-    port = None
-
-    if VERBOSE:
-        print "Found origin %s URL:" % verb, fetch_url
-
-    # Special-case git@github urls - the rest can be parsed with urlparse
-    if fetch_url.startswith("git@github.com"):
-        hostname = "github.com"
-    else:
-        (username, hostname, port) = split_hostname(fetch_url)
-
-    if hostname == "github.com":
-        team = fetch_url.split("/")[-2]
-        if team.startswith("git@github.com"):
-            team = team.split(':')[1]
-
-    return (hostname, team, username, port, project_name)
+    return (hostname, team, username, str(port), project_name)
 
 
 def git_config_get_value(section, option):
