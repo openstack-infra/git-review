@@ -118,7 +118,7 @@ def set_hooks_commit_msg(remote, target_file):
     if not os.path.isdir(hooks_dir):
         os.mkdir(hooks_dir)
 
-    (hostname, team, username, port, project_name) = \
+    (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
     if not os.path.exists(target_file) or UPDATE:
@@ -224,7 +224,6 @@ def parse_git_show(remote, verb):
         project_name = project_name[:-4]
 
     hostname = parsed_url.netloc
-    team = None
     username = None
     port = parsed_url.port
 
@@ -244,11 +243,7 @@ def parse_git_show(remote, verb):
     if parsed_url.scheme == "ssh" and port == None:
         port = 22
 
-    team = project_name.split("/")[-2]
-    if team.startswith("git@github.com"):
-        team = team.split(':')[1]
-
-    return (hostname, team, username, str(port), project_name)
+    return (hostname, username, str(port), project_name)
 
 
 def git_config_get_value(section, option):
@@ -443,7 +438,7 @@ def get_topic(target_branch):
 
 def download_review(review, masterbranch, remote):
 
-    (hostname, team, username, port, project_name) = \
+    (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
     ssh_cmds = ["ssh"]
