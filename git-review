@@ -154,10 +154,10 @@ def test_remote(username, hostname, port, project):
     """ Tests that a possible gerrit remote works """
 
     if username is None:
-        ssh_cmd = "ssh -p%s %s gerrit ls-projects"
+        ssh_cmd = "ssh -x -p%s %s gerrit ls-projects"
         cmd = ssh_cmd % (port, hostname)
     else:
-        ssh_cmd = "ssh -p%s %s@%s gerrit ls-projects"
+        ssh_cmd = "ssh -x -p%s %s@%s gerrit ls-projects"
         cmd = ssh_cmd % (port, username, hostname)
     (status, ssh_output) = run_command_status(cmd)
     if status == 0:
@@ -447,7 +447,7 @@ def list_reviews(remote):
     (hostname, team, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
-    ssh_cmds = ["ssh"]
+    ssh_cmds = ["ssh", "-x"]
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
@@ -497,7 +497,7 @@ def download_review(review, masterbranch, remote):
     (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
-    ssh_cmds = ["ssh"]
+    ssh_cmds = ["ssh", "-x"]
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
