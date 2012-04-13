@@ -499,7 +499,7 @@ def download_review(review, masterbranch, remote):
     checkout_cmd = "git checkout -b %s FETCH_HEAD" % branch_name
     (status, output) = run_command_status(checkout_cmd)
     if status != 0:
-        if output.endswith("already exists"):
+        if re.search("already exists\.?", output):
             print "Branch already exists - reusing"
             checkout_cmd = "git checkout %s" % branch_name
             (status, output) = run_command_status(checkout_cmd)
