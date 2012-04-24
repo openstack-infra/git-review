@@ -444,7 +444,7 @@ def get_topic(target_branch):
 
 def list_reviews(remote):
 
-    (hostname, team, username, port, project_name) = \
+    (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
     ssh_cmds = ["ssh", "-x"]
