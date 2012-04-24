@@ -294,6 +294,19 @@ def get_config():
     return config
 
 
+def update_remote(remote):
+    cmd = "git remote update %s" % remote
+    (status, output) = run_command_status(cmd)
+    if VERBOSE:
+        print output
+    if status != 0:
+        print "Problem running '%s'" % cmd
+        if not VERBOSE:
+            print output
+        return False
+    return True
+
+
 def check_remote(branch, remote, hostname, port, project):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
@@ -313,9 +326,7 @@ def check_remote(branch, remote, hostname, port, project):
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print "Setting up gerrit branch tracking for better rebasing"
-        output = run_command("git remote update %s" % remote)
-        if VERBOSE:
-            print output
+        update_remote(remote)
         return
 
     if hostname == False or port == False or project == False:
@@ -339,14 +350,7 @@ def rebase_changes(branch, remote):
 
     remote_branch = "remotes/%s/%s" % (remote, branch)
 
-    cmd = "git remote update %s" % remote
-    (status, output) = run_command_status(cmd)
-    if VERBOSE:
-        print output
-    if status != 0:
-        print "Problem running '%s'" % cmd
-        if not VERBOSE:
-            print output
+    if not update_remote(remote):
         return False
 
     cmd = "git rebase -i %s" % remote_branch
@@ -377,6 +381,7 @@ def get_branch_name(target_branch):
 
 
 def assert_one_change(remote, branch, yes, have_hook):
+    update_remote(remote)
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
     if has_color:
