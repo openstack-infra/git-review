@@ -710,9 +710,7 @@ def main():
                     print_exit_message(1, needs_update)
             assert_one_change(remote, branch, yes, have_hook)
 
-            # NOTE (kiall): Change to "publish" after 2.2.2 is deployed,
-            #               before refs/for/ is deprecated
-            ref = "for"
+            ref = "publish"
 
             if options.draft:
                 ref = "drafts"
