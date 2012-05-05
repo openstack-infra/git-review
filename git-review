@@ -111,8 +111,8 @@ def latest_is_newer():
 
 
 def get_hooks_target_file():
-    top_dir = run_command('git rev-parse --show-toplevel')
-    hooks_dir = os.path.join(top_dir, ".git/hooks")
+    top_dir = run_command('git rev-parse --git-dir')
+    hooks_dir = os.path.join(top_dir, "hooks")
     return os.path.join(hooks_dir, "commit-msg")
 
 
