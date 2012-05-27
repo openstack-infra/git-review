@@ -600,7 +600,7 @@ def print_exit_message(status, needs_update):
     if needs_update:
         print """
 ***********************************************************
-A new version of git-review is availble on PyPI. Please
+A new version of git-review is available on PyPI. Please
 update your copy with:
 
   pip install -U git-review
