@@ -21,7 +21,7 @@ from setuptools.command.install import install
 # version comes from git-review.
 savename = __name__
 __name__ = "not-main"
-exec(open("git-review", "r"))
+exec(open("git-review").read())
 __name__ = savename
 
 
@@ -40,7 +40,10 @@ setup(
     cmdclass=git_review_cmdclass,
     description="Tool to submit code to Gerrit",
     license='Apache License (2.0)',
-    classifiers=["Programming Language :: Python"],
+    classifiers=[
+            "Programming Language :: Python :: 2",
+            "Programming Language :: Python :: 3",
+        ],
     keywords='git gerrit review',
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
