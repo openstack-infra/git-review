@@ -41,8 +41,8 @@ setup(
     description="Tool to submit code to Gerrit",
     license='Apache License (2.0)',
     classifiers=[
-            "Programming Language :: Python :: 2",
-            "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
     ],
     keywords='git gerrit review',
     author='OpenStack, LLC.',
