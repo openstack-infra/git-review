@@ -471,12 +471,13 @@ def run_ssh_query(remote, *args):
     return run_command_status(" ".join(ssh_cmds))
 
 
-def list_reviews(remote):
+def list_reviews(remote, branch):
     project_name = parse_git_show(remote, "Push")[-1]
 
     (status, output) = run_ssh_query(remote,
                                      "status:open",
-                                     "project:" + project_name)
+                                     "project:" + project_name,
+                                     "branch:" + branch)
     if status != 0:
         print("Could not fetch review information from gerrit")
         print(output)
@@ -501,12 +502,10 @@ def list_reviews(remote):
             break
 
         change = review_info['number']
-        branch = review_info['branch']
         subject = review_info['subject']
         if check_color_support():
             change = colors.yellow + change + colors.reset
-            branch = colors.green + branch + colors.reset
-        print("%s  %s  %s" % (change, branch, subject))
+        print("%s  %s" % (change, subject))
 
     return 0
 
@@ -690,7 +689,7 @@ def main():
         print_exit_message(download_review(options.download, branch, remote),
                            needs_update)
     elif options.list:
-        print_exit_message(list_reviews(remote), needs_update)
+        print_exit_message(list_reviews(remote, branch), needs_update)
     else:
         topic = options.topic
         if topic is None:
