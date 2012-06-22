@@ -456,6 +456,56 @@ def get_topic(target_branch):
     return branch_name
 
 
+class Hacker:
+    def __init__(self, username, name, email):
+        self.username = username
+        self.name = name
+        self.email = email
+
+    @classmethod
+    def parse(cls, h):
+        if not h:
+            return None
+        return cls(h.get('username'), h.get('name'), h.get('email'))
+
+
+class PatchSet:
+    def __init__(self, revision, ref):
+        self.revision = revision
+        self.ref = ref
+
+    @classmethod
+    def parse(cls, ps):
+        if not ps:
+            return None
+        return cls(ps.get('revision'), ps.get('ref'))
+
+
+class Review:
+    def __init__(self, id, number, subject, topic, owner, patchset):
+        self.id = id
+        self.number = number
+        self.subject = subject
+        self.topic = topic
+        self.owner = owner
+        self.patchset = patchset
+
+    @property
+    def shortid(self):
+        return self.id[0:9]
+
+    @classmethod
+    def parse(cls, r):
+        if not r:
+            return None
+        return cls(r['id'],
+                   int(r['number']),
+                   r['subject'],
+                   r.get('topic'),
+                   Hacker.parse(r.get('owner')),
+                   PatchSet.parse(r.get('currentPatchSet')))
+
+
 def run_ssh_query(remote, *args):
     (hostname, username, port, project_name) = parse_git_show(remote, "Push")
 
@@ -475,7 +525,7 @@ def run_ssh_query(remote, *args):
         print(output)
         return (status, None)
 
-    def json_output(output):
+    def reviews(output):
         for line in output.split("\n"):
             # Warnings from ssh wind up in this output
             if line[0] != "{":
@@ -484,32 +534,33 @@ def run_ssh_query(remote, *args):
 
             review_json = json.loads(line)
             if 'type' not in review_json:
-                yield review_json
+                yield Review.parse(review_json)
 
     if VERBOSE:
         print("== output ==\n" + output + "\n== output end ==")
 
-    return (0, json_output(output))
+    return (0, reviews(output))
 
 
 def list_reviews(remote, branch):
     project_name = parse_git_show(remote, "Push")[-1]
 
-    (status, review_jsons) = run_ssh_query(remote,
-                                           "status:open",
-                                           "project:" + project_name,
-                                           "branch:" + branch)
+    (status, reviews) = run_ssh_query(remote,
+                                      "status:open",
+                                      "project:" + project_name,
+                                      "branch:" + branch)
     if status != 0:
         return status
 
     count = 0
     try:
-        for review_info in review_jsons:
-            change = review_info['number']
-            subject = review_info['subject']
+        for r in reviews:
+            change = "%s(%d)" % (r.shortid, r.number)
+            owner = r.owner.username
             if check_color_support():
                 change = colors.yellow + change + colors.reset
-            print("%s  %s" % (change, subject))
+                owner = colors.yellow + owner + colors.reset
+            print("%s  %s  (%s)" % (change, r.subject, owner))
             count += 1
     except:
         print("Could not parse json query response:", sys.exc_info()[1])
@@ -520,16 +571,16 @@ def list_reviews(remote, branch):
 
 
 def download_review(review, masterbranch, remote):
-    (status, review_jsons) = run_ssh_query(remote,
-                                           "--current-patch-set",
-                                           "change:%s" % review)
+    (status, reviews) = run_ssh_query(remote,
+                                      "--current-patch-set",
+                                      "change:%s" % review)
     if status != 0:
         print("Could not fetch review information from gerrit")
         print(output)
         return status
 
     try:
-        review_info = review_jsons.next()
+        r = reviews.next()
     except StopIteration:
         print("Could not find a gerrit review with id: %s" % review)
         return 1
@@ -537,16 +588,14 @@ def download_review(review, masterbranch, remote):
         print("Could not parse json query response:", sys.exc_info()[1])
         return 1
 
-    try:
-        topic = review_info['topic']
-        if topic == masterbranch:
-            topic = review
-    except KeyError:
+    topic = r.topic
+    if not topic or topic == masterbranch:
         topic = review
-    author = re.sub('\W+', '_', review_info['owner']['name']).lower()
+
+    author = re.sub('\W+', '_', r.owner.name.lower())
     branch_name = "review/%s/%s" % (author, topic)
-    revision = review_info['currentPatchSet']['revision']
-    refspec = review_info['currentPatchSet']['ref']
+    revision = r.patchset.revision
+    refspec = r.patchset.ref
 
     print("Downloading %s from gerrit into %s" % (refspec, branch_name))
     (status, output) = run_command_status("git fetch %s %s"
