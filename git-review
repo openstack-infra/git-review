@@ -456,28 +456,33 @@ def get_topic(target_branch):
     return branch_name
 
 
-def list_reviews(remote):
-
-    (hostname, username, port, project_name) = \
-        parse_git_show(remote, "Push")
+def run_ssh_query(remote, *args):
+    (hostname, username, port, project_name) = parse_git_show(remote, "Push")
 
     ssh_cmds = ["ssh", "-x"]
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
         ssh_cmds.extend(["-l", username])
-    ssh_cmd = " ".join(ssh_cmds)
+    ssh_cmds.append(hostname)
+    ssh_cmds.extend(["gerrit", "query", "--format=JSON"])
+    ssh_cmds.extend(args)
 
-    query_string = "--format=JSON project:%s status:open" % project_name
-    review_info = None
-    (status, output) = run_command_status("%s %s gerrit query %s"
-                                          % (ssh_cmd, hostname, query_string))
+    return run_command_status(" ".join(ssh_cmds))
 
+
+def list_reviews(remote):
+    project_name = parse_git_show(remote, "Push")[-1]
+
+    (status, output) = run_ssh_query(remote,
+                                     "status:open",
+                                     "project:" + project_name)
     if status != 0:
         print("Could not fetch review information from gerrit")
         print(output)
         return status
 
+    review_info = None
     for line in output.split("\n"):
         # Warnings from ssh wind up in this output
         if line[0] != "{":
@@ -507,27 +512,15 @@ def list_reviews(remote):
 
 
 def download_review(review, masterbranch, remote):
-
-    (hostname, username, port, project_name) = \
-        parse_git_show(remote, "Push")
-
-    ssh_cmds = ["ssh", "-x"]
-    if port is not None:
-        ssh_cmds.extend(["-p", port])
-    if username is not None:
-        ssh_cmds.extend(["-l", username])
-    ssh_cmd = " ".join(ssh_cmds)
-
-    query_string = "--format=JSON --current-patch-set change:%s" % review
-    review_info = None
-    (status, output) = run_command_status("%s %s gerrit query %s"
-                                           % (ssh_cmd, hostname, query_string))
-
+    (status, output) = run_ssh_query(remote,
+                                     "--current-patch-set",
+                                     "change:%s" % review)
     if status != 0:
         print("Could not fetch review information from gerrit")
         print(output)
         return status
     review_jsons = output.split("\n")
+    review_info = None
     found_review = False
     for review_json in review_jsons:
         try:
