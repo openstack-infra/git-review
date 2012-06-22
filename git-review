@@ -54,6 +54,7 @@ _has_color = None
 class colors:
     yellow = '\033[33m'
     green = '\033[92m'
+    red = '\033[91m'
     reset = '\033[0m'
 
 
@@ -469,16 +470,55 @@ class Hacker:
         return cls(h.get('username'), h.get('name'), h.get('email'))
 
 
+class Approval:
+    CodeReviewed, Approved, Submitted, Verified = range(4)
+
+    type_map = {
+        'CRVW': CodeReviewed,
+        'APRV': Approved,
+        'SUBM': Submitted,
+        'VRIF': Verified,
+        }
+
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value
+
+    @classmethod
+    def parse(cls, a):
+        return cls(cls.type_map[a['type']], int(a['value']))
+
+
 class PatchSet:
-    def __init__(self, revision, ref):
+    def __init__(self, revision, ref, approvals):
         self.revision = revision
         self.ref = ref
+        self.approvals = approvals
+
+    def _score(self, approval_type):
+        values = [a.value for a in self.approvals if a.type == approval_type]
+        if not values:
+            return 0
+        return max(values) if all(v > 0 for v in values) else min(values)
+
+    @property
+    def code_review_score(self):
+        return self._score(Approval.CodeReviewed)
+
+    @property
+    def verified_score(self):
+        return self._score(Approval.Verified)
+
+    @property
+    def approved_score(self):
+        return self._score(Approval.Approved)
 
     @classmethod
     def parse(cls, ps):
         if not ps:
             return None
-        return cls(ps.get('revision'), ps.get('ref'))
+        return cls(ps.get('revision'), ps.get('ref'),
+                   [Approval.parse(a) for a in ps.get('approvals', [])])
 
 
 class Review:
@@ -546,6 +586,7 @@ def list_reviews(remote, branch):
     project_name = parse_git_show(remote, "Push")[-1]
 
     (status, reviews) = run_ssh_query(remote,
+                                      "--current-patch-set",
                                       "status:open",
                                       "project:" + project_name,
                                       "branch:" + branch)
@@ -560,7 +601,21 @@ def list_reviews(remote, branch):
             if check_color_support():
                 change = colors.yellow + change + colors.reset
                 owner = colors.yellow + owner + colors.reset
-            print("%s  %s  (%s)" % (change, r.subject, owner))
+
+            def format_score(prefix, value, neg=True):
+                score = prefix + "="
+                score += ("%-2d" if neg else "%d") % (value,)
+                if value and check_color_support():
+                    color = colors.green if value > 0 else colors.red
+                    score = color + score + colors.reset
+                return score
+
+            rscore = format_score("R", r.patchset.code_review_score)
+            vscore = format_score("V", r.patchset.verified_score)
+            ascore = format_score("A", r.patchset.approved_score, neg=False)
+
+            print("%s [%s %s %s]  %s  (%s)" %
+                  (change, rscore, vscore, ascore, r.subject, owner))
             count += 1
     except:
         print("Could not parse json query response:", sys.exc_info()[1])
