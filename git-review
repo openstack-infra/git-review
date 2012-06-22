@@ -468,71 +468,73 @@ def run_ssh_query(remote, *args):
     ssh_cmds.extend(["gerrit", "query", "--format=JSON"])
     ssh_cmds.extend(args)
 
-    return run_command_status(" ".join(ssh_cmds))
+    (status, output) = run_command_status(" ".join(ssh_cmds))
+
+    if status != 0:
+        print("Could not fetch review information from gerrit")
+        print(output)
+        return (status, None)
+
+    def json_output(output):
+        for line in output.split("\n"):
+            # Warnings from ssh wind up in this output
+            if line[0] != "{":
+                print(line)
+                continue
+
+            review_json = json.loads(line)
+            if 'type' not in review_json:
+                yield review_json
+
+    if VERBOSE:
+        print("== output ==\n" + output + "\n== output end ==")
+
+    return (0, json_output(output))
 
 
 def list_reviews(remote, branch):
     project_name = parse_git_show(remote, "Push")[-1]
 
-    (status, output) = run_ssh_query(remote,
-                                     "status:open",
-                                     "project:" + project_name,
-                                     "branch:" + branch)
+    (status, review_jsons) = run_ssh_query(remote,
+                                           "status:open",
+                                           "project:" + project_name,
+                                           "branch:" + branch)
     if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(output)
         return status
 
-    review_info = None
-    for line in output.split("\n"):
-        # Warnings from ssh wind up in this output
-        if line[0] != "{":
-            print(line)
-            continue
-        try:
-            review_info = json.loads(line)
-        except:
-            if VERBOSE:
-                print(output)
-            print("Could not parse json query response:", sys.exc_info()[1])
-            return 1
+    count = 0
+    try:
+        for review_info in review_jsons:
+            change = review_info['number']
+            subject = review_info['subject']
+            if check_color_support():
+                change = colors.yellow + change + colors.reset
+            print("%s  %s" % (change, subject))
+            count += 1
+    except:
+        print("Could not parse json query response:", sys.exc_info()[1])
+        return 1
 
-        if 'type' in review_info:
-            print("Found %d items for review" % review_info['rowCount'])
-            break
-
-        change = review_info['number']
-        subject = review_info['subject']
-        if check_color_support():
-            change = colors.yellow + change + colors.reset
-        print("%s  %s" % (change, subject))
-
+    print("Found %d items for review" % count)
     return 0
 
 
 def download_review(review, masterbranch, remote):
-    (status, output) = run_ssh_query(remote,
-                                     "--current-patch-set",
-                                     "change:%s" % review)
+    (status, review_jsons) = run_ssh_query(remote,
+                                           "--current-patch-set",
+                                           "change:%s" % review)
     if status != 0:
         print("Could not fetch review information from gerrit")
         print(output)
         return status
-    review_jsons = output.split("\n")
-    review_info = None
-    found_review = False
-    for review_json in review_jsons:
-        try:
-            review_info = json.loads(review_json)
-            found_review = True
-        except:
-            pass
-        if found_review:
-            break
-    if not found_review:
-        if VERBOSE:
-            print(output)
+
+    try:
+        review_info = review_jsons.next()
+    except StopIteration:
         print("Could not find a gerrit review with id: %s" % review)
+        return 1
+    except:
+        print("Could not parse json query response:", sys.exc_info()[1])
         return 1
 
     try:
