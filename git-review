@@ -702,9 +702,82 @@ def finish_branch(target_branch):
     return 0
 
 
-def print_exit_message(status, needs_update):
+def do_submit(options, config):
+    branch = options.branch
+    remote = options.remote
+    yes = options.yes
+    status = 0
 
-    if needs_update:
+    check_remote(branch, remote,
+                 config['hostname'], config['port'], config['project'])
+
+    if options.download is not None:
+        return download_review(options.download, branch, remote)
+    elif options.list:
+        return list_reviews(remote, branch)
+
+    topic = options.topic
+    if topic is None:
+        topic = get_topic(branch)
+    if VERBOSE:
+        print("Found topic '%s' from parsing changes." % topic)
+
+    hook_file = get_hooks_target_file()
+
+    have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+
+    if not have_hook:
+        if not set_hooks_commit_msg(remote, hook_file):
+            return 1
+
+    if not options.setup:
+        if options.rebase:
+            if not rebase_changes(branch, remote):
+                return 1
+        assert_one_change(remote, branch, yes, have_hook)
+
+        ref = "publish"
+
+        if options.draft:
+            ref = "drafts"
+        elif options.compatible:
+            ref = "for"
+
+        cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
+                                                  topic)
+        if options.dry:
+            print("Please use the following command " \
+                  "to send your commits to review:\n")
+            print("\t%s\n" % cmd)
+        else:
+            (status, output) = run_command_status(cmd)
+            print(output)
+
+    if options.finish and not options.dry and status == 0:
+        status = finish_branch(branch)
+
+    return status
+
+
+def default_to_submit(argv):
+    COMMON_ARGS = ["-h", "--help",
+                   "--verbose", "-u", "--update",
+                   "--version", "-v",  "--license"]
+    ACTIONS = ["submit"]
+
+    i = 0
+    while i < len(argv) and argv[i] in COMMON_ARGS:
+        i += 1
+
+    if not (i < len(argv) and argv[i] in ACTIONS):
+        argv.insert(i, "submit")
+
+    return argv
+
+
+def print_exit_message(status):
+
+    if latest_is_newer():
         print("""
 ***********************************************************
 A new version of git-review is available on PyPI. Please
@@ -722,127 +795,73 @@ def main():
 
     config = get_config()
 
-    usage = "git review [OPTIONS] ... [BRANCH]"
+    usage = "git review [submit] [OPTIONS] ... [BRANCH]"
 
     import argparse
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
-
-    parser.add_argument("-t", "--topic", dest="topic",
-                        help="Topic to submit branch to")
-    parser.add_argument("-D", "--draft", dest="draft", action="store_true",
-                        help="Submit review as a draft")
-    parser.add_argument("-c", "--compatible", dest="compatible",
-                        action="store_true",
-                        help="Push change to refs/for/* for compatibility "
-                             "with Gerrit versions < 2.3. Ignored if "
-                             "-D/--draft is used.")
-    parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
-                        help="Don't actually submit the branch for review")
-    parser.add_argument("-r", "--remote", dest="remote",
-                        help="git remote to use for gerrit")
-    parser.add_argument("-R", "--no-rebase", dest="rebase",
-                        action="store_false",
-                        help="Don't rebase changes before submitting.")
-    parser.add_argument("-d", "--download", dest="download",
-                        help="Download the contents of an existing gerrit "
-                             "review into a branch")
     parser.add_argument("-u", "--update", dest="update", action="store_true",
                         help="Force updates from remote locations")
-    parser.add_argument("-s", "--setup", dest="setup", action="store_true",
-                        help="Just run the repo setup commands but don't "
-                             "submit anything")
-    parser.add_argument("-f", "--finish", dest="finish", action="store_true",
-                        help="Close down this branch and switch back to "
-                             "master on successful submission")
-    parser.add_argument("-l", "--list", dest="list", action="store_true",
-                        help="list available reviews for the current project")
-    parser.add_argument("-y", "--yes", dest="yes", action="store_true",
-                        help="Indicate that you do, in fact, understand if "
-                             "you are submitting more than one patch")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
                         help="Output more information about what's going on")
     parser.add_argument("--license", dest="license", action="store_true",
                         help="Print the license and exit")
     parser.add_argument("--version", action="version",
                         version='%s version %s' % \
-                        (os.path.split(sys.argv[0])[-1], version))
-    parser.add_argument("branch", nargs="?", default=config['defaultbranch'])
-    parser.set_defaults(dry=False,
-        draft=False,
-        rebase=config['defaultrebase'],
-        verbose=False,
-        update=False,
-        setup=False,
-        list=False,
-        yes=False,
-        remote=config['defaultremote'])
+                            (os.path.split(sys.argv[0])[-1], version))
 
-    options = parser.parse_args()
+    subparsers = parser.add_subparsers()
+
+    sparser = subparsers.add_parser('submit')
+    sparser.add_argument("-t", "--topic", dest="topic",
+                         help="Topic to submit branch to")
+    sparser.add_argument("-D", "--draft", dest="draft", action="store_true",
+                         help="Submit review as a draft")
+    sparser.add_argument("-c", "--compatible", dest="compatible",
+                         action="store_true",
+                         help="Push change to refs/for/* for compatibility "
+                              "with Gerrit versions < 2.3. Ignored if "
+                              "-D/--draft is used.")
+    sparser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
+                         help="Don't actually submit the branch for review")
+    sparser.add_argument("-r", "--remote", dest="remote",
+                         help="git remote to use for gerrit")
+    sparser.add_argument("-R", "--no-rebase", dest="rebase",
+                         action="store_false",
+                        help="Don't rebase changes before submitting.")
+    sparser.add_argument("-d", "--download", dest="download",
+                         help="Download the contents of an existing gerrit "
+                              "review into a branch")
+    sparser.add_argument("-s", "--setup", dest="setup", action="store_true",
+                         help="Just run the repo setup commands but don't "
+                              "submit anything")
+    sparser.add_argument("-f", "--finish", dest="finish", action="store_true",
+                         help="Close down this branch and switch back to "
+                              "master on successful submission")
+    sparser.add_argument("-l", "--list", dest="list", action="store_true",
+                         help="list available reviews for the current project")
+    sparser.add_argument("-y", "--yes", dest="yes", action="store_true",
+                         help="Indicate that you do, in fact, understand if "
+                              "you are submitting more than one patch")
+    sparser.add_argument("branch", nargs="?", default=config['defaultbranch'])
+    sparser.set_defaults(func=do_submit,
+                         rebase=config['defaultrebase'],
+                         remote=config['defaultremote'])
+
+    argv = default_to_submit(sys.argv[1:])
+
+    options = parser.parse_args(argv)
 
     if options.license:
         print(COPYRIGHT)
         sys.exit(0)
 
-    branch = options.branch
     global VERBOSE
-    global UPDATE
     VERBOSE = options.verbose
+
+    global UPDATE
     UPDATE = options.update
-    remote = options.remote
-    yes = options.yes
-    status = 0
 
-    needs_update = latest_is_newer()
-    check_remote(branch, remote,
-                 config['hostname'], config['port'], config['project'])
-
-    if options.download is not None:
-        print_exit_message(download_review(options.download, branch, remote),
-                           needs_update)
-    elif options.list:
-        print_exit_message(list_reviews(remote, branch), needs_update)
-    else:
-        topic = options.topic
-        if topic is None:
-            topic = get_topic(branch)
-        if VERBOSE:
-            print("Found topic '%s' from parsing changes." % topic)
-
-        hook_file = get_hooks_target_file()
-
-        have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
-
-        if not have_hook:
-            if not set_hooks_commit_msg(remote, hook_file):
-                print_exit_message(1, needs_update)
-
-        if not options.setup:
-            if options.rebase:
-                if not rebase_changes(branch, remote):
-                    print_exit_message(1, needs_update)
-            assert_one_change(remote, branch, yes, have_hook)
-
-            ref = "publish"
-
-            if options.draft:
-                ref = "drafts"
-            elif options.compatible:
-                ref = "for"
-
-            cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
-                                                      topic)
-            if options.dry:
-                print("Please use the following command " \
-                      "to send your commits to review:\n")
-                print("\t%s\n" % cmd)
-            else:
-                (status, output) = run_command_status(cmd)
-                print(output)
-
-        if options.finish and not options.dry and status == 0:
-            status = finish_branch(branch)
-
-    print_exit_message(status, needs_update)
+    print_exit_message(options.func(options, config))
 
 
 if __name__ == "__main__":
