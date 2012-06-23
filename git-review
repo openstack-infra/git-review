@@ -125,8 +125,9 @@ def get_hooks_target_file():
     return os.path.join(hooks_dir, "commit-msg")
 
 
-def set_hooks_commit_msg(remote, target_file):
+def set_hooks_commit_msg(remote):
     """ Install the commit message hook if needed. """
+    target_file = get_hooks_target_file()
 
     # Create the hooks directory if it's not there already
     hooks_dir = os.path.dirname(target_file)
@@ -151,12 +152,12 @@ def set_hooks_commit_msg(remote, target_file):
         if status != 0:
             print("Problems encountered installing commit-msg hook")
             print(scp_output)
-            return False
+            return 1
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
-    return True
+    return 0
 
 
 def test_remote(username, hostname, port, project):
@@ -316,8 +317,14 @@ def update_remote(remote):
     return True
 
 
-def check_remote(branch, remote, hostname, port, project):
+def check_remote(options, config):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
+    remote = options.remote
+    branch = options.branch
+
+    hostname = config["hostname"]
+    port = config["port"]
+    project = config["project"]
 
     has_color = check_color_support()
     if has_color:
@@ -330,12 +337,12 @@ def check_remote(branch, remote, hostname, port, project):
 
         branches = run_command("git branch -a %s" % color_never).split("\n")
         if (not UPDATE and remote_branch in [b.strip() for b in branches]):
-            return
+            return (remote, branch)
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print("Setting up gerrit branch tracking for better rebasing")
         update_remote(remote)
-        return
+        return (remote, branch)
 
     if not (hostname and port and project):
         # This means there was no .gitreview file
@@ -353,8 +360,10 @@ def check_remote(branch, remote, hostname, port, project):
         print("a remote named \"%s\" and try again." % remote)
         raise
 
+    return (remote, branch)
 
-def rebase_changes(branch, remote):
+
+def rebase_changes(remote, branch):
 
     remote_branch = "remotes/%s/%s" % (remote, branch)
 
@@ -382,7 +391,7 @@ def get_branch_name(target_branch):
     return _branch_name
 
 
-def assert_one_change(remote, branch, yes, have_hook):
+def assert_one_change(remote, branch, yes):
     update_remote(remote)
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
@@ -408,7 +417,7 @@ def assert_one_change(remote, branch, yes, have_hook):
     output_lines = len(output.split("\n"))
     if not output:
         output_lines = 0
-    if output_lines == 1 and not have_hook:
+    if output_lines == 1 and not have_hook():
         print("Your change was committed before the commit hook was installed")
         print("Amending the commit to add a gerrit change id")
         run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
@@ -621,7 +630,7 @@ def list_reviews(remote, branch):
     return 0
 
 
-def download_review(review, masterbranch, remote):
+def download_review(review, remote, masterbranch):
     (status, reviews) = run_ssh_query(remote,
                                       "--current-patch-set",
                                       "change:%s" % review)
@@ -698,19 +707,50 @@ def finish_branch(target_branch):
     return 0
 
 
+def have_hook():
+    hook_file = get_hooks_target_file()
+    return os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+
+
+def do_setup(options, config):
+    (remote, branch) = check_remote(options, config)
+    if have_hook():
+        return 0
+    return set_hooks_commit_msg(remote)
+
+
+def do_list(options, config):
+    (remote, branch) = check_remote(options, config)
+    return list_reviews(remote, branch)
+
+
+def do_download(options, config):
+    (remote, branch) = check_remote(options, config)
+    return download_review(options.download, remote, branch)
+
+
 def do_upload(options, config):
-    branch = options.branch
-    remote = options.remote
-    yes = options.yes
-    status = 0
-
-    check_remote(branch, remote,
-                 config['hostname'], config['port'], config['project'])
-
     if options.download is not None:
-        return download_review(options.download, branch, remote)
+        return do_download(options, config)
     elif options.list:
-        return list_reviews(remote, branch)
+        return do_list(options, config)
+
+    (remote, branch) = check_remote(options, config)
+
+    status = do_setup(options, config)
+    if status or options.setup:
+        return status
+
+    if options.rebase and not rebase_changes(remote, branch):
+        return 1
+    assert_one_change(remote, branch, options.yes)
+
+    ref = "publish"
+
+    if options.draft:
+        ref = "drafts"
+    elif options.compatible:
+        ref = "for"
 
     topic = options.topic
     if topic is None:
@@ -718,36 +758,14 @@ def do_upload(options, config):
     if VERBOSE:
         print("Found topic '%s' from parsing changes." % topic)
 
-    hook_file = get_hooks_target_file()
-
-    have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
-
-    if not have_hook:
-        if not set_hooks_commit_msg(remote, hook_file):
-            return 1
-
-    if not options.setup:
-        if options.rebase:
-            if not rebase_changes(branch, remote):
-                return 1
-        assert_one_change(remote, branch, yes, have_hook)
-
-        ref = "publish"
-
-        if options.draft:
-            ref = "drafts"
-        elif options.compatible:
-            ref = "for"
-
-        cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
-                                                  topic)
-        if options.dry:
-            print("Please use the following command "
-                  "to send your commits to review:\n")
-            print("\t%s\n" % cmd)
-        else:
-            (status, output) = run_command_status(cmd)
-            print(output)
+    cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch, topic)
+    if options.dry:
+        print("Please use the following command "
+              "to send your commits to review:\n")
+        print("\t%s\n" % cmd)
+    else:
+        (status, output) = run_command_status(cmd)
+        print(output)
 
     if options.finish and not options.dry and status == 0:
         status = finish_branch(branch)
@@ -759,7 +777,7 @@ def default_to_upload(argv):
     COMMON_ARGS = ["-h", "--help",
                    "--verbose", "-u", "--update",
                    "--version", "-v",  "--license"]
-    ACTIONS = ["upload"]
+    ACTIONS = ["upload", "setup", "list", "download"]
 
     i = 0
     while i < len(argv) and argv[i] in COMMON_ARGS:
@@ -805,6 +823,13 @@ def main():
                         version='%s version %s' %
                         (os.path.split(sys.argv[0])[-1], version))
 
+    def add_branch_and_remote(parser):
+        parser.add_argument("-r", "--remote", dest="remote",
+                            default=config['defaultremote'],
+                            help="git remote to use for gerrit")
+        parser.add_argument("branch", nargs="?",
+                            default=config["defaultbranch"])
+
     subparsers = parser.add_subparsers()
 
     uparser = subparsers.add_parser('upload')
@@ -819,8 +844,6 @@ def main():
                               "-D/--draft is used.")
     uparser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
                          help="Don't actually submit the branch for review")
-    uparser.add_argument("-r", "--remote", dest="remote",
-                         help="git remote to use for gerrit")
     uparser.add_argument("-R", "--no-rebase", dest="rebase",
                          action="store_false",
                          help="Don't rebase changes before submitting.")
@@ -838,10 +861,21 @@ def main():
     uparser.add_argument("-y", "--yes", dest="yes", action="store_true",
                          help="Indicate that you do, in fact, understand if "
                               "you are submitting more than one patch")
-    uparser.add_argument("branch", nargs="?", default=config['defaultbranch'])
-    uparser.set_defaults(func=do_upload,
-                         rebase=config['defaultrebase'],
-                         remote=config['defaultremote'])
+    add_branch_and_remote(uparser)
+    uparser.set_defaults(func=do_upload, rebase=config['defaultrebase'])
+
+    sparser = subparsers.add_parser("setup")
+    add_branch_and_remote(sparser)
+    sparser.set_defaults(func=do_setup)
+
+    lparser = subparsers.add_parser("list")
+    add_branch_and_remote(lparser)
+    lparser.set_defaults(func=do_list)
+
+    dparser = subparsers.add_parser("download")
+    dparser.add_argument("download")
+    add_branch_and_remote(dparser)
+    dparser.set_defaults(func=do_download)
 
     argv = default_to_upload(sys.argv[1:])
 
