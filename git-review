@@ -527,10 +527,11 @@ class PatchSet:
 
 
 class Review:
-    def __init__(self, id, number, subject, topic, owner, patchset):
+    def __init__(self, id, number, subject, url, topic, owner, patchset):
         self.id = id
         self.number = number
         self.subject = subject
+        self.url = url
         self.topic = topic
         self.owner = owner
         self.patchset = patchset
@@ -546,6 +547,7 @@ class Review:
         return cls(r['id'],
                    int(r['number']),
                    r['subject'],
+                   r['url'],
                    r.get('topic'),
                    Hacker.parse(r.get('owner')),
                    PatchSet.parse(r.get('currentPatchSet')))
@@ -687,6 +689,52 @@ def download_review(review, remote, masterbranch):
     return 0
 
 
+def command_exists(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    for path in os.environ["PATH"].split(os.pathsep):
+        if is_exe(os.path.join(path, program)):
+            return True
+
+    return False
+
+
+def open_reviews(reviews, remote, masterbranch):
+    query = " OR ".join(["change:%s" % r for r in reviews])
+    (status, reviews) = run_ssh_query(remote, query)
+    if status != 0:
+        print("Could not fetch review information from gerrit")
+        print(output)
+        return status
+
+    command = None
+    for c in ("xdg-open", "open"):
+        if command_exists(c):
+            command = c
+            break
+
+    if command is None:
+        print("No URL opening command available; install xdg-open?")
+        return 1
+
+    while True:
+        try:
+            r = reviews.next()
+        except StopIteration:
+            break
+        except:
+            print("Could not parse json query response:", sys.exc_info()[1])
+            return 1
+
+        (status, output) = run_command_status(command + " " + r.url)
+        if status != 0:
+            print(output)
+            return status
+
+    return 0
+
+
 def finish_branch(target_branch):
     local_branch = get_branch_name(target_branch)
     if VERBOSE:
@@ -727,6 +775,11 @@ def do_list(options, config):
 def do_download(options, config):
     (remote, branch) = check_remote(options, config)
     return download_review(options.download, remote, branch)
+
+
+def do_open(options, config):
+    (remote, branch) = check_remote(options, config)
+    return open_reviews(options.reviews, remote, branch)
 
 
 def do_upload(options, config):
@@ -777,7 +830,7 @@ def default_to_upload(argv):
     COMMON_ARGS = ["-h", "--help",
                    "--verbose", "-u", "--update",
                    "--version", "-v",  "--license"]
-    ACTIONS = ["upload", "setup", "list", "download"]
+    ACTIONS = ["upload", "setup", "list", "download", "open"]
 
     i = 0
     while i < len(argv) and argv[i] in COMMON_ARGS:
@@ -876,6 +929,11 @@ def main():
     dparser.add_argument("download")
     add_branch_and_remote(dparser)
     dparser.set_defaults(func=do_download)
+
+    oparser = subparsers.add_parser("open")
+    oparser.add_argument("reviews", nargs="+")
+    add_branch_and_remote(oparser)
+    oparser.set_defaults(func=do_open)
 
     argv = default_to_upload(sys.argv[1:])
 
