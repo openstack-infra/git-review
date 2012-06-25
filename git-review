@@ -255,7 +255,7 @@ def parse_git_show(remote, verb):
         (hostname, port) = hostname.split(":")
 
     # Is origin an ssh location? Let's pull more info
-    if parsed_url.scheme == "ssh" and port == None:
+    if parsed_url.scheme == "ssh" and port is None:
         port = 22
 
     return (hostname, username, str(port), project_name)
@@ -326,19 +326,18 @@ def check_remote(branch, remote, hostname, port, project):
         color_never = ""
 
     if remote in run_command("git remote").split("\n"):
+        remote_branch = "remotes/%s/%s" % (remote, branch)
 
-        remotes = run_command("git branch -a %s" % color_never).split("\n")
-        for current_remote in remotes:
-            if current_remote.strip() == "remotes/%s/%s" % (remote, branch) \
-                and not UPDATE:
-                return
+        branches = run_command("git branch -a %s" % color_never).split("\n")
+        if (not UPDATE and remote_branch in [b.strip() for b in branches]):
+            return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
             print("Setting up gerrit branch tracking for better rebasing")
         update_remote(remote)
         return
 
-    if hostname == False or port == False or project == False:
+    if not (hostname and port and project):
         # This means there was no .gitreview file
         print("No '.gitreview' file found in this repository.")
         print("We don't know where your gerrit is. Please manually create ")
@@ -405,8 +404,8 @@ def assert_one_change(remote, branch, yes, have_hook):
         use_color = "--color=%s" % color
     else:
         use_color = ""
-    cmd = "git log %s --decorate --oneline %s --not remotes/%s/%s" % \
-              (use_color, branch_name, remote, branch)
+    cmd = "git log --decorate --oneline " + use_color
+    cmd += " %s --not remotes/%s/%s" % (branch_name, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
         print("Had trouble running %s" % cmd)
@@ -423,8 +422,7 @@ def assert_one_change(remote, branch, yes, have_hook):
         sys.exit(1)
     elif output_lines > 1:
         if not yes:
-            print("You have more than one commit"
-                    " that you are about to submit.")
+            print("You are about to submit more than one commit.")
             print("The outstanding commits are:\n\n%s\n" % output)
             print("Is this really what you meant to do?")
             yes_no = raw_input("Type 'yes' to confirm: ")
@@ -478,7 +476,7 @@ class Approval:
         'APRV': Approved,
         'SUBM': Submitted,
         'VRIF': Verified,
-        }
+    }
 
     def __init__(self, type, value):
         self.type = type
@@ -653,8 +651,8 @@ def download_review(review, masterbranch, remote):
     refspec = r.patchset.ref
 
     print("Downloading %s from gerrit into %s" % (refspec, branch_name))
-    (status, output) = run_command_status("git fetch %s %s"
-        % (remote, refspec))
+    (status, output) = run_command_status("git fetch %s %s" %
+                                          (remote, refspec))
     if status != 0:
         print(output)
         return status
@@ -746,7 +744,7 @@ def do_submit(options, config):
         cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
                                                   topic)
         if options.dry:
-            print("Please use the following command " \
+            print("Please use the following command "
                   "to send your commits to review:\n")
             print("\t%s\n" % cmd)
         else:
@@ -806,8 +804,8 @@ def main():
     parser.add_argument("--license", dest="license", action="store_true",
                         help="Print the license and exit")
     parser.add_argument("--version", action="version",
-                        version='%s version %s' % \
-                            (os.path.split(sys.argv[0])[-1], version))
+                        version='%s version %s' %
+                        (os.path.split(sys.argv[0])[-1], version))
 
     subparsers = parser.add_subparsers()
 
@@ -827,7 +825,7 @@ def main():
                          help="git remote to use for gerrit")
     sparser.add_argument("-R", "--no-rebase", dest="rebase",
                          action="store_false",
-                        help="Don't rebase changes before submitting.")
+                         help="Don't rebase changes before submitting.")
     sparser.add_argument("-d", "--download", dest="download",
                          help="Download the contents of an existing gerrit "
                               "review into a branch")

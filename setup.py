@@ -43,7 +43,7 @@ setup(
     classifiers=[
             "Programming Language :: Python :: 2",
             "Programming Language :: Python :: 3",
-        ],
+    ],
     keywords='git gerrit review',
     author='OpenStack, LLC.',
     author_email='openstack@lists.launchpad.net',
@@ -51,4 +51,4 @@ setup(
     scripts=['git-review'],
     data_files=[('share/man/man1', ['git-review.1'])],
     install_requires=['argparse'],
-    )
+)
