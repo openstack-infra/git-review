@@ -700,7 +700,7 @@ def finish_branch(target_branch):
     return 0
 
 
-def do_submit(options, config):
+def do_upload(options, config):
     branch = options.branch
     remote = options.remote
     yes = options.yes
@@ -757,18 +757,18 @@ def do_submit(options, config):
     return status
 
 
-def default_to_submit(argv):
+def default_to_upload(argv):
     COMMON_ARGS = ["-h", "--help",
                    "--verbose", "-u", "--update",
                    "--version", "-v",  "--license"]
-    ACTIONS = ["submit"]
+    ACTIONS = ["upload"]
 
     i = 0
     while i < len(argv) and argv[i] in COMMON_ARGS:
         i += 1
 
     if not (i < len(argv) and argv[i] in ACTIONS):
-        argv.insert(i, "submit")
+        argv.insert(i, "upload")
 
     return argv
 
@@ -793,7 +793,7 @@ def main():
 
     config = get_config()
 
-    usage = "git review [submit] [OPTIONS] ... [BRANCH]"
+    usage = "git review [upload] [OPTIONS] ... [BRANCH]"
 
     import argparse
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
@@ -809,43 +809,43 @@ def main():
 
     subparsers = parser.add_subparsers()
 
-    sparser = subparsers.add_parser('submit')
-    sparser.add_argument("-t", "--topic", dest="topic",
+    uparser = subparsers.add_parser('upload')
+    uparser.add_argument("-t", "--topic", dest="topic",
                          help="Topic to submit branch to")
-    sparser.add_argument("-D", "--draft", dest="draft", action="store_true",
+    uparser.add_argument("-D", "--draft", dest="draft", action="store_true",
                          help="Submit review as a draft")
-    sparser.add_argument("-c", "--compatible", dest="compatible",
+    uparser.add_argument("-c", "--compatible", dest="compatible",
                          action="store_true",
                          help="Push change to refs/for/* for compatibility "
                               "with Gerrit versions < 2.3. Ignored if "
                               "-D/--draft is used.")
-    sparser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
+    uparser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
                          help="Don't actually submit the branch for review")
-    sparser.add_argument("-r", "--remote", dest="remote",
+    uparser.add_argument("-r", "--remote", dest="remote",
                          help="git remote to use for gerrit")
-    sparser.add_argument("-R", "--no-rebase", dest="rebase",
+    uparser.add_argument("-R", "--no-rebase", dest="rebase",
                          action="store_false",
                          help="Don't rebase changes before submitting.")
-    sparser.add_argument("-d", "--download", dest="download",
+    uparser.add_argument("-d", "--download", dest="download",
                          help="Download the contents of an existing gerrit "
                               "review into a branch")
-    sparser.add_argument("-s", "--setup", dest="setup", action="store_true",
+    uparser.add_argument("-s", "--setup", dest="setup", action="store_true",
                          help="Just run the repo setup commands but don't "
                               "submit anything")
-    sparser.add_argument("-f", "--finish", dest="finish", action="store_true",
+    uparser.add_argument("-f", "--finish", dest="finish", action="store_true",
                          help="Close down this branch and switch back to "
                               "master on successful submission")
-    sparser.add_argument("-l", "--list", dest="list", action="store_true",
+    uparser.add_argument("-l", "--list", dest="list", action="store_true",
                          help="list available reviews for the current project")
-    sparser.add_argument("-y", "--yes", dest="yes", action="store_true",
+    uparser.add_argument("-y", "--yes", dest="yes", action="store_true",
                          help="Indicate that you do, in fact, understand if "
                               "you are submitting more than one patch")
-    sparser.add_argument("branch", nargs="?", default=config['defaultbranch'])
-    sparser.set_defaults(func=do_submit,
+    uparser.add_argument("branch", nargs="?", default=config['defaultbranch'])
+    uparser.set_defaults(func=do_upload,
                          rebase=config['defaultrebase'],
                          remote=config['defaultremote'])
 
-    argv = default_to_submit(sys.argv[1:])
+    argv = default_to_upload(sys.argv[1:])
 
     options = parser.parse_args(argv)
 
