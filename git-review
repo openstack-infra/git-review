@@ -412,6 +412,8 @@ def assert_one_change(remote, branch, yes, have_hook):
         print(output)
         sys.exit(1)
     output_lines = len(output.split("\n"))
+    if not output:
+        output_lines = 0
     if output_lines == 1 and not have_hook:
         print("Your change was committed before the commit hook was installed")
         print("Amending the commit to add a gerrit change id")
