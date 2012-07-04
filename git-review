@@ -460,6 +460,8 @@ def get_topic(target_branch):
 class Hacker:
     def __init__(self, username, name, email):
         self.username = username
+        if self.username is None:
+            self.username = name
         self.name = name
         self.email = email
 
