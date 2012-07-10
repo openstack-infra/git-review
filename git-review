@@ -375,16 +375,10 @@ def get_branch_name(target_branch):
     if _branch_name is not None:
         return _branch_name
     _branch_name = None
-    has_color = check_color_support()
-    if has_color:
-        color_never = "--color=never"
-    else:
-        color_never = ""
-    for branch in run_command("git branch %s" % color_never).split("\n"):
-        if branch.startswith('*'):
-            _branch_name = branch.split()[1].strip()
-    if _branch_name == "(no":
+    branch_ref = run_command("git symbolic-ref -q HEAD")
+    if branch_ref == "":
         _branch_name = target_branch
+    _branch_name = branch_ref[len("refs/heads/"):]
     return _branch_name
 
 
