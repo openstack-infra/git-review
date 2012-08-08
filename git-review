@@ -655,6 +655,9 @@ def main():
                              "-D/--draft is used.")
     parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
                         help="Don't actually submit the branch for review")
+    parser.add_argument("-i", "--new-changeid", dest="regenerate",
+                        action="store_true",
+                        help="Regenerate Change-id before submitting")
     parser.add_argument("-r", "--remote", dest="remote",
                         help="git remote to use for gerrit")
     parser.add_argument("-R", "--no-rebase", dest="rebase",
@@ -753,6 +756,17 @@ def main():
 
             cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
                                                       topic)
+            if options.regenerate:
+                print("Amending the commit to regenerate the change id\n")
+                regenerate_cmd = "git commit --amend"
+                if options.dry:
+                    print("\tGIT_EDITOR=\"sed -i -e '/^Change-Id:/d'\" %s\n" %
+                          regenerate_cmd)
+                else:
+                    run_command(regenerate_cmd,
+                                env=dict(GIT_EDITOR="sed -i -e "
+                                         "'/^Change-Id:/d'"))
+
             if options.dry:
                 print("Please use the following command "
                       "to send your commits to review:\n")
