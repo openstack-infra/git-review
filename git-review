@@ -379,6 +379,16 @@ def rebase_changes(remote, branch):
     return True
 
 
+def undo_rebase():
+    cmd = "git reset --hard ORIG_HEAD"
+    (status, output) = run_command_status(cmd)
+    if status != 0:
+        print("Errors running %s" % cmd)
+        print(output)
+        return False
+    return True
+
+
 def get_branch_name(target_branch):
     global _branch_name
     if _branch_name is not None:
@@ -794,8 +804,11 @@ def do_upload(options, config):
     if status or options.setup:
         return status
 
-    if options.rebase and not rebase_changes(remote, branch):
-        return 1
+    if options.rebase:
+        if not rebase_changes(remote, branch):
+            return 1
+        if not options.force_rebase and not undo_rebase():
+            return 1
     assert_one_change(remote, branch, options.yes)
 
     ref = "publish"
@@ -900,6 +913,9 @@ def main():
     uparser.add_argument("-R", "--no-rebase", dest="rebase",
                          action="store_false",
                          help="Don't rebase changes before submitting.")
+    uparser.add_argument("-F", "--force-rebase", dest="force_rebase",
+                         action="store_true",
+                         help="Force rebase even when not needed.")
     uparser.add_argument("-d", "--download", dest="download",
                          help="Download the contents of an existing gerrit "
                               "review into a branch")
