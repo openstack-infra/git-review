@@ -599,12 +599,17 @@ def run_ssh_query(remote, *args):
     return (0, reviews(output))
 
 
-def list_reviews(remote, branch):
+def list_reviews(remote, branch, list_all=False):
     project_name = parse_git_show(remote, "Push")[-1]
+    if not list_all:
+        reviewable = "is:reviewable"
+    else:
+        reviewable = ""
 
     (status, reviews) = run_ssh_query(remote,
                                       "--current-patch-set",
                                       "status:open",
+                                      reviewable,
                                       "project:" + project_name,
                                       "branch:" + branch)
     if status != 0:
@@ -779,7 +784,7 @@ def do_setup(options, config):
 
 def do_list(options, config):
     (remote, branch) = check_remote(options, config)
-    return list_reviews(remote, branch)
+    return list_reviews(remote, branch, options.list_all)
 
 
 def do_download(options, config):
@@ -952,8 +957,10 @@ def main():
     sparser.set_defaults(func=do_setup)
 
     lparser = subparsers.add_parser("list")
+    lparser.add_argument("-a", "--all", dest="list_all", action="store_true",
+                         help="List all reviews, not just is:reviewable")
     add_branch_and_remote(lparser)
-    lparser.set_defaults(func=do_list)
+    lparser.set_defaults(func=do_list, list_all=False)
 
     dparser = subparsers.add_parser("download")
     dparser.add_argument("download")
