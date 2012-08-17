@@ -445,6 +445,11 @@ def assert_one_change(remote, branch, yes):
                 print("Aborting.")
                 print("Please rebase/squash your changes and try again")
                 sys.exit(1)
+    # run again, this time never with color
+    cmd = "git log --decorate --oneline --color=never "
+    cmd += " %s --not remotes/%s/%s" % (branch_name, remote, branch)
+    (status, output) = run_command_status(cmd)
+    return [change.split()[0] for change in output.split("\n")]
 
 
 def get_topic(target_branch):
@@ -563,24 +568,29 @@ class Review:
                    PatchSet.parse(r.get('currentPatchSet')))
 
 
-def run_ssh_query(remote, *args):
+def run_ssh_cmd(remote, *args):
     (hostname, username, port, project_name) = parse_git_show(remote, "Push")
-
     ssh_cmds = ["ssh", "-x"]
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
         ssh_cmds.extend(["-l", username])
     ssh_cmds.append(hostname)
-    ssh_cmds.extend(["gerrit", "query", "--format=JSON"])
+    ssh_cmds.append("gerrit")
     ssh_cmds.extend(args)
 
     (status, output) = run_command_status(" ".join(ssh_cmds))
 
     if status != 0:
-        print("Could not fetch review information from gerrit")
+        print("Could not run command:\n\t%s\non gerrit" % " ".join(ssh_cmds))
         print(output)
         return (status, None)
+    return (status, output)
+
+
+def run_ssh_query(remote, *args):
+
+    (status, output) = run_ssh_cmd(remote, "query", "--format=JSON", *args)
 
     def reviews(output):
         for line in output.split("\n"):
@@ -814,7 +824,7 @@ def do_upload(options, config):
             return 1
         if not options.force_rebase and not undo_rebase():
             return 1
-    assert_one_change(remote, branch, options.yes)
+    changes_to_submit = assert_one_change(remote, branch, options.yes)
 
     ref = "publish"
 
@@ -851,6 +861,17 @@ def do_upload(options, config):
 
     if options.finish and not options.dry and status == 0:
         status = finish_branch(branch)
+
+    if options.workinprogress and status == 0:
+        for change in changes_to_submit:
+            if VERBOSE:
+                print("Setting work-in-progress state for %s" % change)
+            if not options.dry:
+                (status, output) = run_ssh_cmd(remote, "review", change,
+                                               "--workinprogress")
+            if status != 0:
+                print("Unable to set work-in-progress for %s" % change)
+                print(output)
 
     return status
 
@@ -946,11 +967,15 @@ def main():
                               "master on successful submission")
     uparser.add_argument("-l", "--list", dest="list", action="store_true",
                          help="list available reviews for the current project")
+    uparser.add_argument("-w", "--workinprogress", dest="workinprogress",
+                         action="store_true",
+                         help="Set uploaded changes to workinprogress state")
     uparser.add_argument("-y", "--yes", dest="yes", action="store_true",
                          help="Indicate that you do, in fact, understand if "
                               "you are submitting more than one patch")
     add_branch_and_remote(uparser)
-    uparser.set_defaults(func=do_upload, rebase=config['defaultrebase'])
+    uparser.set_defaults(func=do_upload, rebase=config['defaultrebase'],
+                         workinprogress=False)
 
     sparser = subparsers.add_parser("setup")
     add_branch_and_remote(sparser)
