@@ -579,18 +579,16 @@ def run_ssh_cmd(remote, *args):
     ssh_cmds.append("gerrit")
     ssh_cmds.extend(args)
 
-    (status, output) = run_command_status(" ".join(ssh_cmds))
-
-    if status != 0:
-        print("Could not run command:\n\t%s\non gerrit" % " ".join(ssh_cmds))
-        print(output)
-        return (status, None)
-    return (status, output)
+    return run_command_status(" ".join(ssh_cmds))
 
 
 def run_ssh_query(remote, *args):
 
     (status, output) = run_ssh_cmd(remote, "query", "--format=JSON", *args)
+    if status != 0:
+        print("Could not fetch review information from gerrit")
+        print(output)
+        return (status, None)
 
     def reviews(output):
         for line in output.split("\n"):
@@ -609,16 +607,17 @@ def run_ssh_query(remote, *args):
     return (0, reviews(output))
 
 
-def list_reviews(remote, branch, list_all=False):
-    project_name = parse_git_show(remote, "Push")[-1]
-    if not list_all:
+def list_reviews(remote, branch, list_mine=False):
+    (hostname, username, port, project_name) = parse_git_show(remote, "Push")
+
+    if list_mine:
         reviewable = "is:reviewable"
     else:
-        reviewable = ""
+        reviewable = "status:open"
 
     (status, reviews) = run_ssh_query(remote,
                                       "--current-patch-set",
-                                      "status:open",
+                                      "--",
                                       reviewable,
                                       "project:" + project_name,
                                       "branch:" + branch)
@@ -794,7 +793,11 @@ def do_setup(options, config):
 
 def do_list(options, config):
     (remote, branch) = check_remote(options, config)
-    return list_reviews(remote, branch, options.list_all)
+    if hasattr(options, 'list_mine'):
+        list_mine = options.list_mine
+    else:
+        list_mine = False
+    return list_reviews(remote, branch, list_mine)
 
 
 def do_download(options, config):
@@ -982,10 +985,10 @@ def main():
     sparser.set_defaults(func=do_setup)
 
     lparser = subparsers.add_parser("list")
-    lparser.add_argument("-a", "--all", dest="list_all", action="store_true",
-                         help="List all reviews, not just is:reviewable")
+    lparser.add_argument("-m", "--mine", dest="list_mine", action="store_true",
+                         help="List only the reviews in is:reviewable")
     add_branch_and_remote(lparser)
-    lparser.set_defaults(func=do_list, list_all=False)
+    lparser.set_defaults(func=do_list, list_mine=False)
 
     dparser = subparsers.add_parser("download")
     dparser.add_argument("download")
