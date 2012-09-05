@@ -38,7 +38,7 @@ import re
 import shlex
 import subprocess
 
-version = "1.18"
+version = "1.19"
 
 VERBOSE = False
 UPDATE = False
