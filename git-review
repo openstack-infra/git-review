@@ -678,7 +678,7 @@ def download_review(review, remote, masterbranch):
     if not topic or topic == masterbranch:
         topic = review
 
-    author = re.sub('\W+', '_', r.owner.name.lower())
+    author = re.sub('\W+', '_', r.owner.name.lower()) if r.owner else 'unknown'
     branch_name = "review/%s/%s" % (author, topic)
     revision = r.patchset.revision
     refspec = r.patchset.ref
