@@ -551,7 +551,10 @@ def download_review(review, masterbranch, remote):
             topic = review
     except KeyError:
         topic = review
-    author = re.sub('\W+', '_', review_info['owner']['name']).lower()
+    if review_info.get('owner'):
+        author = re.sub('\W+', '_', review_info['owner']['name']).lower()
+    else:
+        author = 'unknown'
     branch_name = "review/%s/%s" % (author, topic)
     revision = review_info['currentPatchSet']['revision']
     refspec = review_info['currentPatchSet']['ref']
