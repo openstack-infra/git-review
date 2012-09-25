@@ -622,6 +622,8 @@ def list_reviews(remote, branch, list_mine=False):
                                       "project:" + project_name,
                                       "branch:" + branch)
     if status != 0:
+        print("Could not fetch review information from gerrit")
+        print(reviews)
         return status
 
     count = 0
@@ -662,7 +664,7 @@ def download_review(review, remote, masterbranch):
                                       "change:%s" % review)
     if status != 0:
         print("Could not fetch review information from gerrit")
-        print(output)
+        print(reviews)
         return status
 
     try:
@@ -729,7 +731,7 @@ def open_reviews(reviews, remote, masterbranch):
     (status, reviews) = run_ssh_query(remote, query)
     if status != 0:
         print("Could not fetch review information from gerrit")
-        print(output)
+        print(reviews)
         return status
 
     command = None
