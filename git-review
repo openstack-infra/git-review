@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
 COPYRIGHT = """\
 Copyright (C) 2011-2012 OpenStack LLC.
 
@@ -18,17 +16,12 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-import sys
 import urllib
 import json
 
 from distutils.version import StrictVersion
-if sys.version < '3':
-    from urlparse import urlparse
-    import ConfigParser
-else:
-    from urllib.parse import urlparse
-    import configparser as ConfigParser
+from urlparse import urlparse
+import ConfigParser
 
 import datetime
 import os
@@ -54,20 +47,18 @@ _has_color = None
 class colors:
     yellow = '\033[33m'
     green = '\033[92m'
-    red = '\033[91m'
     reset = '\033[0m'
 
 
 def run_command(cmd, status=False, env={}):
     if VERBOSE:
-        print(datetime.datetime.now(), "Running:", cmd)
+        print datetime.datetime.now(), "Running:", cmd
     cmd_list = shlex.split(str(cmd))
     newenv = os.environ
     newenv.update(env)
     p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, env=newenv)
     (out, nothing) = p.communicate()
-    out = out.decode('utf-8')
     if status:
         return (p.returncode, out.strip())
     return out.strip()
@@ -125,9 +116,8 @@ def get_hooks_target_file():
     return os.path.join(hooks_dir, "commit-msg")
 
 
-def set_hooks_commit_msg(remote):
+def set_hooks_commit_msg(remote, target_file):
     """ Install the commit message hook if needed. """
-    target_file = get_hooks_target_file()
 
     # Create the hooks directory if it's not there already
     hooks_dir = os.path.dirname(target_file)
@@ -139,7 +129,7 @@ def set_hooks_commit_msg(remote):
 
     if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
-            print("Fetching commit hook from: scp://%s:%s" % (hostname, port))
+            print "Fetching commit hook from: scp://%s:%s" % (hostname, port)
         scp_cmd = "scp "
         if port is not None:
             scp_cmd += "-P%s " % port
@@ -150,14 +140,14 @@ def set_hooks_commit_msg(remote):
         scp_cmd += ":hooks/commit-msg %s" % target_file
         (status, scp_output) = run_command_status(scp_cmd)
         if status != 0:
-            print("Problems encountered installing commit-msg hook")
-            print(scp_output)
-            return 1
+            print "Problems encountered installing commit-msg hook"
+            print scp_output
+            return False
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
-    return 0
+    return True
 
 
 def test_remote(username, hostname, port, project):
@@ -172,11 +162,11 @@ def test_remote(username, hostname, port, project):
     (status, ssh_output) = run_command_status(cmd)
     if status == 0:
         if VERBOSE:
-            print("%s@%s:%s worked." % (username, hostname, port))
+            print "%s@%s:%s worked." % (username, hostname, port)
         return True
     else:
         if VERBOSE:
-            print("%s@%s:%s did not work." % (username, hostname, port))
+            print "%s@%s:%s did not work." % (username, hostname, port)
         return False
 
 
@@ -202,18 +192,18 @@ def add_remote(hostname, port, project, remote):
 
     remote_url = make_remote_url(username, hostname, port, project)
     if VERBOSE:
-        print("No remote set, testing %s" % remote_url)
+        print "No remote set, testing %s" % remote_url
     if not test_remote(username, hostname, port, project):
-        print("Could not connect to gerrit.")
+        print "Could not connect to gerrit."
         username = raw_input("Enter your gerrit username: ")
         remote_url = make_remote_url(username, hostname, port, project)
-        print("Trying again with %s" % remote_url)
+        print "Trying again with %s" % remote_url
         if not test_remote(username, hostname, port, project):
             raise Exception("Could not connect to gerrit at %s" % remote_url)
         asked_for_username = True
 
-    print("Creating a git remote called \"%s\" that maps to:" % remote)
-    print("\t%s" % remote_url)
+    print "Creating a git remote called \"%s\" that maps to:" % remote
+    print "\t%s" % remote_url
     cmd = "git remote add -f %s %s" % (remote, remote_url)
     (status, remote_output) = run_command_status(cmd)
 
@@ -221,11 +211,11 @@ def add_remote(hostname, port, project, remote):
         raise Exception("Error running %s" % cmd)
 
     if asked_for_username:
-        print()
-        print("This repository is now set up for use with git-review.")
-        print("You can set the default username for future repositories with:")
-        print('  git config --global --add gitreview.username "%s"' % username)
-        print()
+        print
+        print "This repository is now set up for use with git-review."
+        print "You can set the default username for future repositories with:"
+        print '  git config --global --add gitreview.username "%s"' % username
+        print
 
 
 def parse_git_show(remote, verb):
@@ -244,7 +234,7 @@ def parse_git_show(remote, verb):
     port = parsed_url.port
 
     if VERBOSE:
-        print("Found origin %s URL:" % verb, fetch_url)
+        print "Found origin %s URL:" % verb, fetch_url
 
     # Workaround bug in urlparse on OSX
     if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
@@ -308,23 +298,17 @@ def update_remote(remote):
     cmd = "git remote update %s" % remote
     (status, output) = run_command_status(cmd)
     if VERBOSE:
-        print(output)
+        print output
     if status != 0:
-        print("Problem running '%s'" % cmd)
+        print "Problem running '%s'" % cmd
         if not VERBOSE:
-            print(output)
+            print output
         return False
     return True
 
 
-def check_remote(options, config):
+def check_remote(branch, remote, hostname, port, project):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
-    remote = options.remote
-    branch = options.branch
-
-    hostname = config["hostname"]
-    port = config["port"]
-    project = config["project"]
 
     has_color = check_color_support()
     if has_color:
@@ -333,37 +317,36 @@ def check_remote(options, config):
         color_never = ""
 
     if remote in run_command("git remote").split("\n"):
-        remote_branch = "remotes/%s/%s" % (remote, branch)
 
-        branches = run_command("git branch -a %s" % color_never).split("\n")
-        if (not UPDATE and remote_branch in [b.strip() for b in branches]):
-            return (remote, branch)
+        remotes = run_command("git branch -a %s" % color_never).split("\n")
+        for current_remote in remotes:
+            if (current_remote.strip() == "remotes/%s/%s" % (remote, branch)
+                and not UPDATE):
+                return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
-            print("Setting up gerrit branch tracking for better rebasing")
+            print "Setting up gerrit branch tracking for better rebasing"
         update_remote(remote)
-        return (remote, branch)
+        return
 
-    if not (hostname and port and project):
+    if hostname is False or port is False or project is False:
         # This means there was no .gitreview file
-        print("No '.gitreview' file found in this repository.")
-        print("We don't know where your gerrit is. Please manually create ")
-        print("a remote named gerrit and try again.")
+        print "No '.gitreview' file found in this repository."
+        print "We don't know where your gerrit is. Please manually create "
+        print "a remote named gerrit and try again."
         sys.exit(1)
 
     # Gerrit remote not present, try to add it
     try:
         add_remote(hostname, port, project, remote)
     except:
-        print(sys.exc_info()[2])
-        print("We don't know where your gerrit is. Please manually create ")
-        print("a remote named \"%s\" and try again." % remote)
+        print sys.exc_info()[2]
+        print "We don't know where your gerrit is. Please manually create "
+        print "a remote named \"%s\" and try again." % remote
         raise
 
-    return (remote, branch)
 
-
-def rebase_changes(remote, branch):
+def rebase_changes(branch, remote):
 
     remote_branch = "remotes/%s/%s" % (remote, branch)
 
@@ -373,18 +356,8 @@ def rebase_changes(remote, branch):
     cmd = "git rebase -i %s" % remote_branch
     (status, output) = run_command_status(cmd, env=dict(GIT_EDITOR='true'))
     if status != 0:
-        print("Errors running %s" % cmd)
-        print(output)
-        return False
-    return True
-
-
-def undo_rebase():
-    cmd = "git reset --hard ORIG_HEAD"
-    (status, output) = run_command_status(cmd)
-    if status != 0:
-        print("Errors running %s" % cmd)
-        print(output)
+        print "Errors running %s" % cmd
+        print output
         return False
     return True
 
@@ -394,14 +367,20 @@ def get_branch_name(target_branch):
     if _branch_name is not None:
         return _branch_name
     _branch_name = None
-    branch_ref = run_command("git symbolic-ref -q HEAD")
-    if branch_ref == "":
+    has_color = check_color_support()
+    if has_color:
+        color_never = "--color=never"
+    else:
+        color_never = ""
+    for branch in run_command("git branch %s" % color_never).split("\n"):
+        if branch.startswith('*'):
+            _branch_name = branch.split()[1].strip()
+    if _branch_name == "(no":
         _branch_name = target_branch
-    _branch_name = branch_ref[len("refs/heads/"):]
     return _branch_name
 
 
-def assert_one_change(remote, branch, yes):
+def assert_one_change(remote, branch, yes, have_hook):
     update_remote(remote)
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
@@ -417,39 +396,32 @@ def assert_one_change(remote, branch, yes):
         use_color = "--color=%s" % color
     else:
         use_color = ""
-    cmd = "git log --decorate --oneline " + use_color
-    cmd += " %s --not remotes/%s/%s" % (branch_name, remote, branch)
+    cmd = "git log %s --decorate --oneline %s --not remotes/%s/%s" % (
+        use_color, branch_name, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
-        print("Had trouble running %s" % cmd)
-        print(output)
+        print "Had trouble running %s" % cmd
+        print output
         sys.exit(1)
     output_lines = len(output.split("\n"))
-    if not output:
-        output_lines = 0
-    if output_lines == 1 and not have_hook():
-        print("Your change was committed before the commit hook was installed")
-        print("Amending the commit to add a gerrit change id")
+    if output_lines == 1 and not have_hook:
+        print "Your change was committed before the commit hook was installed"
+        print "Amending the commit to add a gerrit change id"
         run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
     elif output_lines == 0:
-        print("No changes between HEAD and %s/%s." % (remote, branch))
-        print("Submitting for review would be pointless.")
+        print "No changes between HEAD and %s/%s." % (remote, branch)
+        print "Submitting for review would be pointless."
         sys.exit(1)
     elif output_lines > 1:
         if not yes:
-            print("You are about to submit more than one commit.")
-            print("The outstanding commits are:\n\n%s\n" % output)
-            print("Is this really what you meant to do?")
+            print "You have more than one commit that you are about to submit."
+            print "The outstanding commits are:\n\n%s\n" % output
+            print "Is this really what you meant to do?"
             yes_no = raw_input("Type 'yes' to confirm: ")
             if yes_no.lower().strip() != "yes":
-                print("Aborting.")
-                print("Please rebase/squash your changes and try again")
+                print "Aborting."
+                print "Please rebase/squash your changes and try again"
                 sys.exit(1)
-    # run again, this time never with color
-    cmd = "git log --decorate --oneline --color=never "
-    cmd += " %s --not remotes/%s/%s" % (branch_name, remote, branch)
-    (status, output) = run_command_status(cmd)
-    return [change.split()[0] for change in output.split("\n")]
 
 
 def get_topic(target_branch):
@@ -475,441 +447,167 @@ def get_topic(target_branch):
     return branch_name
 
 
-class Hacker:
-    def __init__(self, username, name, email):
-        self.username = username
-        if self.username is None:
-            self.username = name
-        self.name = name
-        self.email = email
+def list_reviews(remote):
 
-    @classmethod
-    def parse(cls, h):
-        if not h:
-            return None
-        return cls(h.get('username'), h.get('name'), h.get('email'))
+    (hostname, username, port, project_name) = \
+        parse_git_show(remote, "Push")
 
-
-class Approval:
-    CodeReviewed, Approved, Submitted, Verified = range(4)
-
-    type_map = {
-        'CRVW': CodeReviewed,
-        'APRV': Approved,
-        'SUBM': Submitted,
-        'VRIF': Verified,
-    }
-
-    def __init__(self, type, value):
-        self.type = type
-        self.value = value
-
-    @classmethod
-    def parse(cls, a):
-        return cls(cls.type_map[a['type']], int(a['value']))
-
-
-class PatchSet:
-    def __init__(self, revision, ref, approvals):
-        self.revision = revision
-        self.ref = ref
-        self.approvals = approvals
-
-    def _score(self, approval_type):
-        values = [a.value for a in self.approvals if a.type == approval_type]
-        if not values:
-            return 0
-        return max(values) if all(v > 0 for v in values) else min(values)
-
-    @property
-    def code_review_score(self):
-        return self._score(Approval.CodeReviewed)
-
-    @property
-    def verified_score(self):
-        return self._score(Approval.Verified)
-
-    @property
-    def approved_score(self):
-        return self._score(Approval.Approved)
-
-    @classmethod
-    def parse(cls, ps):
-        if not ps:
-            return None
-        return cls(ps.get('revision'), ps.get('ref'),
-                   [Approval.parse(a) for a in ps.get('approvals', [])])
-
-
-class Review:
-    def __init__(self, id, number, subject, url, topic, owner, patchset):
-        self.id = id
-        self.number = number
-        self.subject = subject
-        self.url = url
-        self.topic = topic
-        self.owner = owner
-        self.patchset = patchset
-
-    @property
-    def shortid(self):
-        return self.id[0:9]
-
-    @classmethod
-    def parse(cls, r):
-        if not r:
-            return None
-        return cls(r['id'],
-                   int(r['number']),
-                   r['subject'],
-                   r['url'],
-                   r.get('topic'),
-                   Hacker.parse(r.get('owner')),
-                   PatchSet.parse(r.get('currentPatchSet')))
-
-
-def run_ssh_cmd(remote, *args):
-    (hostname, username, port, project_name) = parse_git_show(remote, "Push")
     ssh_cmds = ["ssh", "-x"]
     if port is not None:
         ssh_cmds.extend(["-p", port])
     if username is not None:
         ssh_cmds.extend(["-l", username])
-    ssh_cmds.append(hostname)
-    ssh_cmds.append("gerrit")
-    ssh_cmds.extend(args)
+    ssh_cmd = " ".join(ssh_cmds)
 
-    return run_command_status(" ".join(ssh_cmds))
+    query_string = "--format=JSON project:%s status:open" % project_name
+    review_info = None
+    (status, output) = run_command_status("%s %s gerrit query %s"
+                                          % (ssh_cmd, hostname, query_string))
 
-
-def run_ssh_query(remote, *args):
-
-    (status, output) = run_ssh_cmd(remote, "query", "--format=JSON", *args)
     if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(output)
-        return (status, None)
-
-    def reviews(output):
-        for line in output.split("\n"):
-            # Warnings from ssh wind up in this output
-            if line[0] != "{":
-                print(line)
-                continue
-
-            review_json = json.loads(line)
-            if 'type' not in review_json:
-                yield Review.parse(review_json)
-
-    if VERBOSE:
-        print("== output ==\n" + output + "\n== output end ==")
-
-    return (0, reviews(output))
-
-
-def list_reviews(remote, branch, list_mine=False):
-    (hostname, username, port, project_name) = parse_git_show(remote, "Push")
-
-    if list_mine:
-        reviewable = "is:reviewable"
-    else:
-        reviewable = "status:open"
-
-    (status, reviews) = run_ssh_query(remote,
-                                      "--current-patch-set",
-                                      "--",
-                                      reviewable,
-                                      "project:" + project_name,
-                                      "branch:" + branch)
-    if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(reviews)
+        print "Could not fetch review information from gerrit"
+        print output
         return status
 
-    count = 0
-    try:
-        for r in reviews:
-            change = "%s(%d)" % (r.shortid, r.number)
-            owner = r.owner.username
-            if check_color_support():
-                change = colors.yellow + change + colors.reset
-                owner = colors.yellow + owner + colors.reset
+    for line in output.split("\n"):
+        # Warnings from ssh wind up in this output
+        if line[0] != "{":
+            print line
+            continue
+        try:
+            review_info = json.loads(line)
+        except:
+            if VERBOSE:
+                print output
+            print "Could not parse json query response:", sys.exc_info()[1]
+            return 1
 
-            def format_score(prefix, value, neg=True):
-                score = prefix + "="
-                score += ("%-2d" if neg else "%d") % (value,)
-                if value and check_color_support():
-                    color = colors.green if value > 0 else colors.red
-                    score = color + score + colors.reset
-                return score
+        if 'type' in review_info:
+            print "Found %d items for review" % review_info['rowCount']
+            break
 
-            rscore = format_score("R", r.patchset.code_review_score)
-            vscore = format_score("V", r.patchset.verified_score)
-            ascore = format_score("A", r.patchset.approved_score, neg=False)
+        change = review_info['number']
+        branch = review_info['branch']
+        subject = review_info['subject']
+        if check_color_support():
+            change = colors.yellow + change + colors.reset
+            branch = colors.green + branch + colors.reset
+        print "%s  %s  %s" % (change, branch, subject)
 
-            print("%s [%s %s %s]  %s  (%s)" %
-                  (change, rscore, vscore, ascore, r.subject, owner))
-            count += 1
-    except:
-        print("Could not parse json query response:", sys.exc_info()[1])
-        return 1
-
-    print("Found %d items for review" % count)
     return 0
 
 
-def download_review(review, remote, masterbranch):
-    (status, reviews) = run_ssh_query(remote,
-                                      "--current-patch-set",
-                                      "change:%s" % review)
+def download_review(review, masterbranch, remote):
+
+    (hostname, username, port, project_name) = \
+        parse_git_show(remote, "Push")
+
+    ssh_cmds = ["ssh", "-x"]
+    if port is not None:
+        ssh_cmds.extend(["-p", port])
+    if username is not None:
+        ssh_cmds.extend(["-l", username])
+    ssh_cmd = " ".join(ssh_cmds)
+
+    query_string = "--format=JSON --current-patch-set change:%s" % review
+    review_info = None
+    (status, output) = run_command_status("%s %s gerrit query %s"
+                                          % (ssh_cmd, hostname, query_string))
+
     if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(reviews)
+        print "Could not fetch review information from gerrit"
+        print output
         return status
+    review_jsons = output.split("\n")
+    found_review = False
+    for review_json in review_jsons:
+        try:
+            review_info = json.loads(review_json)
+            found_review = True
+        except:
+            pass
+        if found_review:
+            break
+    if not found_review:
+        if VERBOSE:
+            print output
+        print "Could not find a gerrit review with id: %s" % review
+        return 1
 
     try:
-        r = reviews.next()
-    except StopIteration:
-        print("Could not find a gerrit review with id: %s" % review)
-        return 1
-    except:
-        print("Could not parse json query response:", sys.exc_info()[1])
-        return 1
-
-    topic = r.topic
-    if not topic or topic == masterbranch:
+        topic = review_info['topic']
+        if topic == masterbranch:
+            topic = review
+    except KeyError:
         topic = review
-
-    author = re.sub('\W+', '_', r.owner.name.lower()) if r.owner else 'unknown'
+    author = re.sub('\W+', '_', review_info['owner']['name']).lower()
     branch_name = "review/%s/%s" % (author, topic)
-    revision = r.patchset.revision
-    refspec = r.patchset.ref
+    revision = review_info['currentPatchSet']['revision']
+    refspec = review_info['currentPatchSet']['ref']
 
-    print("Downloading %s from gerrit into %s" % (refspec, branch_name))
-    (status, output) = run_command_status("git fetch %s %s" %
-                                          (remote, refspec))
+    print "Downloading %s from gerrit into %s" % (refspec, branch_name)
+    (status, output) = run_command_status("git fetch %s %s" % (
+        remote, refspec))
     if status != 0:
-        print(output)
+        print output
         return status
 
     checkout_cmd = "git checkout -b %s FETCH_HEAD" % branch_name
     (status, output) = run_command_status(checkout_cmd)
     if status != 0:
         if re.search("already exists\.?", output):
-            print("Branch already exists - reusing")
+            print "Branch already exists - reusing"
             checkout_cmd = "git checkout %s" % branch_name
             (status, output) = run_command_status(checkout_cmd)
             if status != 0:
-                print(output)
+                print output
                 return status
             reset_cmd = "git reset --hard FETCH_HEAD"
             (status, output) = run_command_status(reset_cmd)
             if status != 0:
-                print(output)
+                print output
                 return status
         else:
-            print(output)
+            print output
             return status
 
-    print("Switched to branch '%s'" % branch_name)
-    return 0
-
-
-def command_exists(program):
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    for path in os.environ["PATH"].split(os.pathsep):
-        if is_exe(os.path.join(path, program)):
-            return True
-
-    return False
-
-
-def open_reviews(reviews, remote, masterbranch):
-    query = " OR ".join(["change:%s" % r for r in reviews])
-    (status, reviews) = run_ssh_query(remote, query)
-    if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(reviews)
-        return status
-
-    command = None
-    for c in ("xdg-open", "open"):
-        if command_exists(c):
-            command = c
-            break
-
-    if command is None:
-        print("No URL opening command available; install xdg-open?")
-        return 1
-
-    while True:
-        try:
-            r = reviews.next()
-        except StopIteration:
-            break
-        except:
-            print("Could not parse json query response:", sys.exc_info()[1])
-            return 1
-
-        (status, output) = run_command_status(command + " " + r.url)
-        if status != 0:
-            print(output)
-            return status
-
+    print "Switched to branch '%s'" % branch_name
     return 0
 
 
 def finish_branch(target_branch):
     local_branch = get_branch_name(target_branch)
     if VERBOSE:
-        print("Switching back to %s and deleting %s" % (target_branch,
-                                                        local_branch))
+        print "Switching back to %s and deleting %s" % (target_branch,
+                                                        local_branch)
     checkout_cmd = "git checkout %s" % target_branch
     (status, output) = run_command_status(checkout_cmd)
     if status != 0:
-        print(output)
+        print output
         return status
-    print("Switched to branch '%s'" % target_branch)
+    print "Switched to branch '%s'" % target_branch
     close_cmd = "git branch -D %s" % local_branch
     (status, output) = run_command_status(close_cmd)
     if status != 0:
-        print(output)
+        print output
         return status
-    print("Deleted branch '%s'" % local_branch)
+    print "Deleted branch '%s'" % local_branch
     return 0
 
 
-def have_hook():
-    hook_file = get_hooks_target_file()
-    return os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+def print_exit_message(status, needs_update):
 
-
-def do_setup(options, config):
-    (remote, branch) = check_remote(options, config)
-    if have_hook():
-        return 0
-    return set_hooks_commit_msg(remote)
-
-
-def do_list(options, config):
-    (remote, branch) = check_remote(options, config)
-    if hasattr(options, 'list_mine'):
-        list_mine = options.list_mine
-    else:
-        list_mine = False
-    return list_reviews(remote, branch, list_mine)
-
-
-def do_download(options, config):
-    (remote, branch) = check_remote(options, config)
-    return download_review(options.download, remote, branch)
-
-
-def do_open(options, config):
-    (remote, branch) = check_remote(options, config)
-    return open_reviews(options.reviews, remote, branch)
-
-
-def do_upload(options, config):
-    if options.download is not None:
-        return do_download(options, config)
-    elif options.list:
-        return do_list(options, config)
-
-    (remote, branch) = check_remote(options, config)
-
-    status = do_setup(options, config)
-    if status or options.setup:
-        return status
-
-    if options.rebase:
-        if not rebase_changes(remote, branch):
-            return 1
-        if not options.force_rebase and not undo_rebase():
-            return 1
-    changes_to_submit = assert_one_change(remote, branch, options.yes)
-
-    ref = "publish"
-
-    if options.draft:
-        ref = "drafts"
-    elif options.compatible:
-        ref = "for"
-
-    topic = options.topic
-    if topic is None:
-        topic = get_topic(branch)
-    if VERBOSE:
-        print("Found topic '%s' from parsing changes." % topic)
-
-    cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch, topic)
-
-    if options.regenerate:
-        print("Amending the commit to regenerate the change id\n")
-        regenerate_cmd = "git commit --amend"
-        if options.dry:
-            print("\tGIT_EDITOR=\"sed -i -e '/^Change-Id:/d'\" %s\n" %
-                  regenerate_cmd)
-        else:
-            run_command(regenerate_cmd,
-                        env=dict(GIT_EDITOR="sed -i -e '/^Change-Id:/d'"))
-
-    if options.dry:
-        print("Please use the following command "
-              "to send your commits to review:\n")
-        print("\t%s\n" % cmd)
-    else:
-        (status, output) = run_command_status(cmd)
-        print(output)
-
-    if options.finish and not options.dry and status == 0:
-        status = finish_branch(branch)
-
-    if options.workinprogress and status == 0:
-        for change in changes_to_submit:
-            if VERBOSE:
-                print("Setting work-in-progress state for %s" % change)
-            if not options.dry:
-                (status, output) = run_ssh_cmd(remote, "review", change,
-                                               "--workinprogress")
-            if status != 0:
-                print("Unable to set work-in-progress for %s" % change)
-                print(output)
-
-    return status
-
-
-def default_to_upload(argv):
-    COMMON_ARGS = ["-h", "--help",
-                   "--verbose", "-u", "--update",
-                   "--version", "-v",  "--license"]
-    ACTIONS = ["upload", "setup", "list", "download", "open"]
-
-    i = 0
-    while i < len(argv) and argv[i] in COMMON_ARGS:
-        i += 1
-
-    if not (i < len(argv) and argv[i] in ACTIONS):
-        argv.insert(i, "upload")
-
-    return argv
-
-
-def print_exit_message(status):
-
-    if latest_is_newer():
-        print("""
+    if needs_update:
+        print """
 ***********************************************************
-A new version of git-review is available on PyPI. Please
+A new version of git-review is availble on PyPI. Please
 update your copy with:
 
   pip install -U git-review
 
 to ensure proper behavior with gerrit. Thanks!
 ***********************************************************
-""")
+"""
     sys.exit(status)
 
 
@@ -917,12 +615,38 @@ def main():
 
     config = get_config()
 
-    usage = "git review [upload] [OPTIONS] ... [BRANCH]"
+    usage = "git review [OPTIONS] ... [BRANCH]"
 
     import argparse
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
+
+    parser.add_argument("-t", "--topic", dest="topic",
+                        help="Topic to submit branch to")
+    parser.add_argument("-D", "--draft", dest="draft", action="store_true",
+                        help="Submit review as a draft")
+    parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
+                        help="Don't actually submit the branch for review")
+    parser.add_argument("-r", "--remote", dest="remote",
+                        help="git remote to use for gerrit")
+    parser.add_argument("-R", "--no-rebase", dest="rebase",
+                        action="store_false",
+                        help="Don't rebase changes before submitting.")
+    parser.add_argument("-d", "--download", dest="download",
+                        help="Download the contents of an existing gerrit "
+                             "review into a branch")
     parser.add_argument("-u", "--update", dest="update", action="store_true",
                         help="Force updates from remote locations")
+    parser.add_argument("-s", "--setup", dest="setup", action="store_true",
+                        help="Just run the repo setup commands but don't "
+                             "submit anything")
+    parser.add_argument("-f", "--finish", dest="finish", action="store_true",
+                        help="Close down this branch and switch back to "
+                             "master on successful submission")
+    parser.add_argument("-l", "--list", dest="list", action="store_true",
+                        help="list available reviews for the current project")
+    parser.add_argument("-y", "--yes", dest="yes", action="store_true",
+                        help="Indicate that you do, in fact, understand if "
+                             "you are submitting more than one patch")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
                         help="Output more information about what's going on")
     parser.add_argument("--license", dest="license", action="store_true",
@@ -930,93 +654,81 @@ def main():
     parser.add_argument("--version", action="version",
                         version='%s version %s' %
                         (os.path.split(sys.argv[0])[-1], version))
+    parser.add_argument("branch", nargs="?", default=config['defaultbranch'])
+    parser.set_defaults(dry=False,
+                        draft=False,
+                        rebase=config['defaultrebase'],
+                        verbose=False,
+                        update=False,
+                        setup=False,
+                        list=False,
+                        yes=False,
+                        remote=config['defaultremote'])
 
-    def add_branch_and_remote(parser):
-        parser.add_argument("-r", "--remote", dest="remote",
-                            default=config['defaultremote'],
-                            help="git remote to use for gerrit")
-        parser.add_argument("branch", nargs="?",
-                            default=config["defaultbranch"])
-
-    subparsers = parser.add_subparsers()
-
-    uparser = subparsers.add_parser('upload')
-    uparser.add_argument("-t", "--topic", dest="topic",
-                         help="Topic to submit branch to")
-    uparser.add_argument("-D", "--draft", dest="draft", action="store_true",
-                         help="Submit review as a draft")
-    uparser.add_argument("-c", "--compatible", dest="compatible",
-                         action="store_true",
-                         help="Push change to refs/for/* for compatibility "
-                              "with Gerrit versions < 2.3. Ignored if "
-                              "-D/--draft is used.")
-    uparser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
-                         help="Don't actually submit the branch for review")
-    uparser.add_argument("-i", "--new-changeid", dest="regenerate",
-                         action="store_true",
-                         help="Regenerate Change-id before submitting")
-    uparser.add_argument("-R", "--no-rebase", dest="rebase",
-                         action="store_false",
-                         help="Don't rebase changes before submitting.")
-    uparser.add_argument("-F", "--force-rebase", dest="force_rebase",
-                         action="store_true",
-                         help="Force rebase even when not needed.")
-    uparser.add_argument("-d", "--download", dest="download",
-                         help="Download the contents of an existing gerrit "
-                              "review into a branch")
-    uparser.add_argument("-s", "--setup", dest="setup", action="store_true",
-                         help="Just run the repo setup commands but don't "
-                              "submit anything")
-    uparser.add_argument("-f", "--finish", dest="finish", action="store_true",
-                         help="Close down this branch and switch back to "
-                              "master on successful submission")
-    uparser.add_argument("-l", "--list", dest="list", action="store_true",
-                         help="list available reviews for the current project")
-    uparser.add_argument("-w", "--workinprogress", dest="workinprogress",
-                         action="store_true",
-                         help="Set uploaded changes to workinprogress state")
-    uparser.add_argument("-y", "--yes", dest="yes", action="store_true",
-                         help="Indicate that you do, in fact, understand if "
-                              "you are submitting more than one patch")
-    add_branch_and_remote(uparser)
-    uparser.set_defaults(func=do_upload, rebase=config['defaultrebase'],
-                         workinprogress=False)
-
-    sparser = subparsers.add_parser("setup")
-    add_branch_and_remote(sparser)
-    sparser.set_defaults(func=do_setup)
-
-    lparser = subparsers.add_parser("list")
-    lparser.add_argument("-m", "--mine", dest="list_mine", action="store_true",
-                         help="List only the reviews in is:reviewable")
-    add_branch_and_remote(lparser)
-    lparser.set_defaults(func=do_list, list_mine=False)
-
-    dparser = subparsers.add_parser("download")
-    dparser.add_argument("download")
-    add_branch_and_remote(dparser)
-    dparser.set_defaults(func=do_download)
-
-    oparser = subparsers.add_parser("open")
-    oparser.add_argument("reviews", nargs="+")
-    add_branch_and_remote(oparser)
-    oparser.set_defaults(func=do_open)
-
-    argv = default_to_upload(sys.argv[1:])
-
-    options = parser.parse_args(argv)
+    options = parser.parse_args()
 
     if options.license:
-        print(COPYRIGHT)
+        print COPYRIGHT
         sys.exit(0)
 
+    branch = options.branch
     global VERBOSE
-    VERBOSE = options.verbose
-
     global UPDATE
+    VERBOSE = options.verbose
     UPDATE = options.update
+    remote = options.remote
+    yes = options.yes
+    status = 0
 
-    print_exit_message(options.func(options, config))
+    needs_update = latest_is_newer()
+    check_remote(branch, remote,
+                 config['hostname'], config['port'], config['project'])
+
+    if options.download is not None:
+        print_exit_message(download_review(options.download, branch, remote),
+                           needs_update)
+    elif options.list:
+        print_exit_message(list_reviews(remote), needs_update)
+    else:
+        topic = options.topic
+        if topic is None:
+            topic = get_topic(branch)
+        if VERBOSE:
+            print "Found topic '%s' from parsing changes." % topic
+
+        hook_file = get_hooks_target_file()
+
+        have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+
+        if not have_hook:
+            if not set_hooks_commit_msg(remote, hook_file):
+                print_exit_message(1, needs_update)
+
+        if not options.setup:
+            if options.rebase:
+                if not rebase_changes(branch, remote):
+                    print_exit_message(1, needs_update)
+            assert_one_change(remote, branch, yes, have_hook)
+
+            ref = "publish"
+
+            if options.draft:
+                ref = "drafts"
+
+            cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
+                                                      topic)
+            if options.dry:
+                print "Please use the following command " \
+                      "to send your commits to review:\n"
+                print "\t%s\n" % cmd
+            else:
+                (status, output) = run_command_status(cmd)
+                print output
+
+        if options.finish and not options.dry and status == 0:
+            status = finish_branch(branch)
+
+    print_exit_message(status, needs_update)
 
 
 if __name__ == "__main__":
