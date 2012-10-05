@@ -18,25 +18,27 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-import sys
-import urllib
-import json
-
-from distutils.version import StrictVersion
-if sys.version < '3':
-    from urlparse import urlparse
-    import ConfigParser
-else:
-    from urllib.parse import urlparse
-    import configparser as ConfigParser
-
 import datetime
+import json
 import os
-import sys
-import time
 import re
 import shlex
 import subprocess
+import sys
+import time
+
+if sys.version < '3':
+    from urllib import urlopen
+    from urlparse import urlparse
+    import ConfigParser
+    do_input = raw_input
+else:
+    from urllib.request import urlopen
+    from urllib.parse import urlparse
+    import configparser as ConfigParser
+    do_input = input
+
+from distutils.version import StrictVersion
 
 version = "1.19"
 
@@ -88,7 +90,7 @@ def update_latest_version(version_file_path):
 
     latest_version = version
     try:
-        latest_version = json.load(urllib.urlopen(PYPI_URL))['info']['version']
+        latest_version = json.load(urlopen(PYPI_URL))['info']['version']
     except:
         pass
 
@@ -203,7 +205,7 @@ def add_remote(hostname, port, project, remote):
         print("No remote set, testing %s" % remote_url)
     if not test_remote(username, hostname, port, project):
         print("Could not connect to gerrit.")
-        username = raw_input("Enter your gerrit username: ")
+        username = do_input("Enter your gerrit username: ")
         remote_url = make_remote_url(username, hostname, port, project)
         print("Trying again with %s" % remote_url)
         if not test_remote(username, hostname, port, project):
@@ -426,7 +428,7 @@ def assert_one_change(remote, branch, yes, have_hook):
                   " that you are about to submit.")
             print("The outstanding commits are:\n\n%s\n" % output)
             print("Is this really what you meant to do?")
-            yes_no = raw_input("Type 'yes' to confirm: ")
+            yes_no = do_input("Type 'yes' to confirm: ")
             if yes_no.lower().strip() != "yes":
                 print("Aborting.")
                 print("Please rebase/squash your changes and try again")
