@@ -59,21 +59,22 @@ class colors:
     reset = '\033[0m'
 
 
-def run_command_status(cmd, env={}):
+def run_command_status(*argv, **env):
     if VERBOSE:
-        print(datetime.datetime.now(), "Running:", cmd)
-    cmd_list = shlex.split(str(cmd))
+        print(datetime.datetime.now(), "Running:", " ".join(argv))
+    if len(argv) == 1:
+        argv = shlex.split(str(argv[0]))
     newenv = os.environ
     newenv.update(env)
-    p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
+    p = subprocess.Popen(argv, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, env=newenv)
     (out, nothing) = p.communicate()
     out = out.decode('utf-8')
     return (p.returncode, out.strip())
 
 
-def run_command(cmd, env={}):
-    (rc, output) = run_command_status(cmd, env)
+def run_command(*argv, **env):
+    (rc, output) = run_command_status(*argv, **env)
     return output
 
 
@@ -363,7 +364,7 @@ def rebase_changes(branch, remote):
         return False
 
     cmd = "git rebase -i %s" % remote_branch
-    (status, output) = run_command_status(cmd, env=dict(GIT_EDITOR='true'))
+    (status, output) = run_command_status(cmd, GIT_EDITOR='true')
     if status != 0:
         print("Errors running %s" % cmd)
         print(output)
@@ -426,7 +427,7 @@ def assert_one_change(remote, branch, yes, have_hook):
     if output_lines == 1 and not have_hook:
         print("Your change was committed before the commit hook was installed")
         print("Amending the commit to add a gerrit change id")
-        run_command("git commit --amend", env=dict(GIT_EDITOR='true'))
+        run_command("git commit --amend", GIT_EDITOR='true')
     elif output_lines == 0:
         print("No changes between HEAD and %s/%s." % (remote, branch))
         print("Submitting for review would be pointless.")
@@ -763,8 +764,8 @@ def main():
                           regenerate_cmd)
                 else:
                     run_command(regenerate_cmd,
-                                env=dict(GIT_EDITOR="sed -i -e "
-                                         "'/^Change-Id:/d'"))
+                                GIT_EDITOR="sed -i -e "
+                                "'/^Change-Id:/d'")
 
             if options.dry:
                 print("Please use the following command "
