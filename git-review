@@ -59,7 +59,7 @@ class colors:
     reset = '\033[0m'
 
 
-def run_command(cmd, status=False, env={}):
+def run_command_status(cmd, env={}):
     if VERBOSE:
         print(datetime.datetime.now(), "Running:", cmd)
     cmd_list = shlex.split(str(cmd))
@@ -69,13 +69,12 @@ def run_command(cmd, status=False, env={}):
                          stderr=subprocess.STDOUT, env=newenv)
     (out, nothing) = p.communicate()
     out = out.decode('utf-8')
-    if status:
-        return (p.returncode, out.strip())
-    return out.strip()
+    return (p.returncode, out.strip())
 
 
-def run_command_status(cmd, env={}):
-    return run_command(cmd, True, env)
+def run_command(cmd, env={}):
+    (rc, output) = run_command_status(cmd, env)
+    return output
 
 
 def update_latest_version(version_file_path):
