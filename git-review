@@ -140,15 +140,19 @@ def set_hooks_commit_msg(remote, target_file):
     if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
             print("Fetching commit hook from: scp://%s:%s" % (hostname, port))
-        scp_cmd = "scp "
         if port is not None:
-            scp_cmd += "-P%s " % port
-        if username is None:
-            scp_cmd += hostname
+            port = "-P %s" % port
         else:
-            scp_cmd += "%s@%s" % (username, hostname)
-        scp_cmd += ":hooks/commit-msg %s" % target_file
-        (status, scp_output) = run_command_status(scp_cmd)
+            port = ""
+        if username is None:
+            userhost = hostname
+        else:
+            userhost = "%s@%s" % (username, hostname)
+        (status, scp_output) = run_command_status(
+            "scp", port,
+            userhost + ":hooks/commit-msg",
+            target_file)
+
         if status != 0:
             print("Problems encountered installing commit-msg hook")
             print(scp_output)
@@ -163,13 +167,19 @@ def set_hooks_commit_msg(remote, target_file):
 def test_remote(username, hostname, port, project):
     """ Tests that a possible gerrit remote works """
 
-    if username is None:
-        ssh_cmd = "ssh -x -p%s %s gerrit ls-projects"
-        cmd = ssh_cmd % (port, hostname)
+    if port is not None:
+        port = "-p %s" % port
     else:
-        ssh_cmd = "ssh -x -p%s %s@%s gerrit ls-projects"
-        cmd = ssh_cmd % (port, username, hostname)
-    (status, ssh_output) = run_command_status(cmd)
+        port = ""
+    if username is None:
+        userhost = hostname
+    else:
+        userhost = "%s@%s" % (username, hostname)
+
+    (status, ssh_output) = run_command_status(
+        "ssh", "-x", port, userhost,
+        "gerrit", "ls-projects")
+
     if status == 0:
         if VERBOSE:
             print("%s@%s:%s worked." % (username, hostname, port))
@@ -473,17 +483,20 @@ def list_reviews(remote):
     (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
-    ssh_cmds = ["ssh", "-x"]
     if port is not None:
-        ssh_cmds.extend(["-p", port])
-    if username is not None:
-        ssh_cmds.extend(["-l", username])
-    ssh_cmd = " ".join(ssh_cmds)
+        port = "-p %s" % port
+    else:
+        port = ""
+    if username is None:
+        userhost = hostname
+    else:
+        userhost = "%s@%s" % (username, hostname)
 
-    query_string = "--format=JSON project:%s status:open" % project_name
     review_info = None
-    (status, output) = run_command_status("%s %s gerrit query %s"
-                                          % (ssh_cmd, hostname, query_string))
+    (status, output) = run_command_status(
+        "ssh", "-x", port, userhost,
+        "gerrit", "query",
+        "--format=JSON project:%s status:open" % project_name)
 
     if status != 0:
         print("Could not fetch review information from gerrit")
@@ -523,17 +536,20 @@ def download_review(review, masterbranch, remote):
     (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
 
-    ssh_cmds = ["ssh", "-x"]
     if port is not None:
-        ssh_cmds.extend(["-p", port])
-    if username is not None:
-        ssh_cmds.extend(["-l", username])
-    ssh_cmd = " ".join(ssh_cmds)
+        port = "-p %s" % port
+    else:
+        port = ""
+    if username is None:
+        userhost = hostname
+    else:
+        userhost = "%s@%s" % (username, hostname)
 
-    query_string = "--format=JSON --current-patch-set change:%s" % review
     review_info = None
-    (status, output) = run_command_status("%s %s gerrit query %s"
-                                          % (ssh_cmd, hostname, query_string))
+    (status, output) = run_command_status(
+        "ssh", "-x", port, userhost,
+        "gerrit", "query",
+        "--format=JSON --current-patch-set change:%s" % review)
 
     if status != 0:
         print("Could not fetch review information from gerrit")
