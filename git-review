@@ -490,6 +490,20 @@ def list_reviews(remote):
         print(output)
         return status
 
+    review_list = []
+    review_field_width = {}
+    REVIEW_FIELDS = ('number', 'branch', 'subject')
+    FIELDS = range(0, len(REVIEW_FIELDS))
+    if check_color_support():
+        review_field_color = (colors.yellow, colors.green, "")
+        color_reset = colors.reset
+    else:
+        review_field_color = ("", "", "")
+        color_reset = ""
+    review_field_width = [0, 0, 0]
+    review_field_format = ["%*s", "%*s", "%*s"]
+    review_field_justify = [+1, +1, -1]  # -1 is justify to right
+
     for line in output.split("\n"):
         # Warnings from ssh wind up in this output
         if line[0] != "{":
@@ -504,16 +518,36 @@ def list_reviews(remote):
             return 1
 
         if 'type' in review_info:
-            print("Found %d items for review" % review_info['rowCount'])
             break
 
-        change = review_info['number']
-        branch = review_info['branch']
-        subject = review_info['subject']
-        if check_color_support():
-            change = colors.yellow + change + colors.reset
-            branch = colors.green + branch + colors.reset
-        print("%s  %s  %s" % (change, branch, subject))
+        review_list.append([review_info[f] for f in REVIEW_FIELDS])
+        for i in FIELDS:
+            review_field_width[i] = max(
+                review_field_width[i],
+                len(review_info[REVIEW_FIELDS[i]])
+            )
+
+    review_field_format = "  ".join([
+        review_field_color[i] +
+        review_field_format[i] +
+        color_reset
+        for i in FIELDS])
+
+    review_field_width = [
+        review_field_width[i] * review_field_justify[i]
+        for i in FIELDS]
+    for review_value in review_list:
+        # At this point we have review_field_format
+        # like "%*s %*s %*s" and we need to supply
+        # (width1, value1, width2, value2, ...) tuple to print
+        # It's easy to zip() widths with actual values,
+        # but we need to flatten the resulting
+        #  ((width1, value1), (width2, value2), ...) map.
+        formatted_fields = []
+        for (width, value) in zip(review_field_width, review_value):
+            formatted_fields.extend([width, value])
+        print(review_field_format % tuple(formatted_fields))
+    print("Found %d items for review" % review_info['rowCount'])
 
     return 0
 
