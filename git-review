@@ -59,6 +59,25 @@ class colors:
     reset = '\033[0m'
 
 
+class CommandFailed(Exception):
+
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
+        (rc, output, argv, envp) = args
+        self.quickmsg = dict([
+            ("argv", " ".join(argv)),
+            ("rc", rc),
+            ("output", output)])
+
+    def __str__(self):
+        return self.__doc__ + """
+The following command failed with exit code %(rc)d
+    "%(argv)s"
+-----------------------
+%(output)s
+-----------------------""" % self.quickmsg
+
+
 def run_command_status(*argv, **env):
     if VERBOSE:
         print(datetime.datetime.now(), "Running:", " ".join(argv))
@@ -75,6 +94,16 @@ def run_command_status(*argv, **env):
 
 def run_command(*argv, **env):
     (rc, output) = run_command_status(*argv, **env)
+    return output
+
+
+def run_command_exc(klazz, *argv, **env):
+    """Run command *argv, on failure raise 'klazz
+
+    klass should be derived from CommandFailed"""
+    (rc, output) = run_command_status(*argv, **env)
+    if rc != 0:
+        raise klazz(rc, output, argv, env)
     return output
 
 
@@ -126,6 +155,11 @@ def get_hooks_target_file():
     return os.path.join(hooks_dir, "commit-msg")
 
 
+class CannotInstallHook(CommandFailed):
+    "Problems encountered installing commit-msg hook"
+    EXIT_CODE = 2
+
+
 def set_hooks_commit_msg(remote, target_file):
     """ Install the commit message hook if needed. """
 
@@ -148,20 +182,14 @@ def set_hooks_commit_msg(remote, target_file):
             userhost = hostname
         else:
             userhost = "%s@%s" % (username, hostname)
-        (status, scp_output) = run_command_status(
+        run_command_exc(
+            CannotInstallHook,
             "scp", port,
             userhost + ":hooks/commit-msg",
             target_file)
 
-        if status != 0:
-            print("Problems encountered installing commit-msg hook")
-            print(scp_output)
-            return False
-
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
-
-    return True
 
 
 def test_remote(username, hostname, port, project):
@@ -752,8 +780,7 @@ def main():
         have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
 
         if not have_hook:
-            if not set_hooks_commit_msg(remote, hook_file):
-                print_exit_message(1, needs_update)
+            set_hooks_commit_msg(remote, hook_file)
 
         if not options.setup:
             if options.rebase:
@@ -798,4 +825,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except CommandFailed, e:
+        print(e)
+        sys.exit(e.EXIT_CODE)
