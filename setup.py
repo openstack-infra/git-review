@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2010-2011 OpenStack, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,6 @@ setup(
     author_email='openstack@lists.launchpad.net',
     url='https://launchpad.net/git-review',
     scripts=['git-review'],
-    data_files=[('share/man/man1', ['git-review.1'])],
+    data_files=[('man/man1', ['git-review.1'])],
     install_requires=['argparse'],
 )
