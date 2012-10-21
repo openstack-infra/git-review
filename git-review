@@ -678,7 +678,7 @@ def main():
                         help="Close down this branch and switch back to "
                              "master on successful submission")
     parser.add_argument("-l", "--list", dest="list", action="store_true",
-                        help="list available reviews for the current project")
+                        help="List available reviews for the current project")
     parser.add_argument("-y", "--yes", dest="yes", action="store_true",
                         help="Indicate that you do, in fact, understand if "
                              "you are submitting more than one patch")
