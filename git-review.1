@@ -66,7 +66,7 @@ Submit review as a draft. Requires Gerrit 2.3 or newer.
 .It Fl R , Fl -no-rebase
 Do not automatically perform a rebase before submitting the change to
 Gerrit.
-
+.Pp
 When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
 .It Fl -version
 Print the version number and exit.
@@ -106,10 +106,11 @@ project=department/project.git
 defaultbranch=master
 defaultremote=review
 defaultrebase=0
-
+.Ed
+.Pp
 .Sh EXAMPLES
 To fetch a remote change number 3004:
-
+.Pp
 .Bd -literal -offset indent
 $ git-review -d 3004
 Downloading refs/changes/04/3004/1 from gerrit into
@@ -119,7 +120,7 @@ $ git branch
   master
 * review/author/topic_name
 .Ed
-
+.Pp
 Gerrit looks up both name of the author and the topic name from Gerrit
 to name a local branch. This facilitates easier identification of changes.
 .Pp
