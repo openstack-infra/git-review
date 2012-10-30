@@ -108,6 +108,18 @@ defaultremote=review
 defaultrebase=0
 .Ed
 .Pp
+.Sh DIAGNOSTICS
+.Pp
+Normally, exit status is 0 if executed successfully.
+Exit status 1 indicates general error, sometimes more
+specific error codes are available:
+.Bl -tag -width 999
+.It 2
+Gerrit
+.Ar commit-msg
+hook could not be successfully installed.
+.El
+.Pp
 .Sh EXAMPLES
 To fetch a remote change number 3004:
 .Pp
