@@ -720,24 +720,28 @@ def download_review(review, masterbranch, remote):
     print("Switched to branch '%s'" % branch_name)
 
 
+class CheckoutBackExistingBranchFailed(CommandFailed):
+    "Cannot switch back to existing branch"
+    EXIT_CODE = 67
+
+
+class DeleteBranchFailed(CommandFailed):
+    "Failed to delete branch"
+    EXIT_CODE = 68
+
+
 def finish_branch(target_branch):
     local_branch = get_branch_name(target_branch)
     if VERBOSE:
-        print("Switching back to %s and deleting %s" % (target_branch,
-                                                        local_branch))
-    checkout_cmd = "git checkout %s" % target_branch
-    (status, output) = run_command_status(checkout_cmd)
-    if status != 0:
-        print(output)
-        return status
+        print("Switching back to '%s' and deleting '%s'" % (target_branch,
+                                                            local_branch))
+    run_command_exc(CheckoutBackExistingBranchFailed,
+                    "git", "checkout", target_branch)
     print("Switched to branch '%s'" % target_branch)
-    close_cmd = "git branch -D %s" % local_branch
-    (status, output) = run_command_status(close_cmd)
-    if status != 0:
-        print(output)
-        return status
+
+    run_command_exc(DeleteBranchFailed,
+                    "git", "branch", "-D", local_branch)
     print("Deleted branch '%s'" % local_branch)
-    return 0
 
 
 def print_exit_message(status, needs_update):
