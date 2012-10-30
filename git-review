@@ -607,6 +607,43 @@ def list_reviews(remote):
     return 0
 
 
+class CannotQueryPatchSet(CommandFailed):
+    "Cannot query patchset information"
+    EXIT_CODE = 34
+
+
+class PatchSetInformationNotFound(ChangeSetException):
+    "Could not fetch review information for change %s"
+    EXIT_CODE = 35
+
+
+class PatchSetNotFound(ChangeSetException):
+    "Gerrit review %s not found"
+    EXIT_CODE = 36
+
+
+class PatchSetGitFetchFailed(CommandFailed):
+    """Cannot fetch patchset contents
+
+Does specified change number belong to this project?"""
+    EXIT_CODE = 37
+
+
+class CheckoutNewBranchFailed(CommandFailed):
+    "Cannot checkout to new branch"
+    EXIT_CODE = 64
+
+
+class CheckoutExistingBranchFailed(CommandFailed):
+    "Cannot checkout existing branch"
+    EXIT_CODE = 65
+
+
+class ResetHardFailed(CommandFailed):
+    "Failed to hard reset downloaded branch"
+    EXIT_CODE = 66
+
+
 def download_review(review, masterbranch, remote):
 
     (hostname, username, port, project_name) = \
@@ -622,15 +659,12 @@ def download_review(review, masterbranch, remote):
         userhost = "%s@%s" % (username, hostname)
 
     review_info = None
-    (status, output) = run_command_status(
+    output = run_command_exc(
+        CannotQueryPatchSet,
         "ssh", "-x", port, userhost,
         "gerrit", "query",
         "--format=JSON --current-patch-set change:%s" % review)
 
-    if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(output)
-        return status
     review_jsons = output.split("\n")
     found_review = False
     for review_json in review_jsons:
@@ -644,8 +678,13 @@ def download_review(review, masterbranch, remote):
     if not found_review:
         if VERBOSE:
             print(output)
-        print("Could not find a gerrit review with id: %s" % review)
-        return 1
+        raise PatchSetInformationNotFound(review)
+
+    try:
+        revision = review_info['currentPatchSet']['revision']
+        refspec = review_info['currentPatchSet']['ref']
+    except KeyError:
+        raise PatchSetNotFound(review)
 
     try:
         topic = review_info['topic']
@@ -658,37 +697,27 @@ def download_review(review, masterbranch, remote):
     else:
         author = 'unknown'
     branch_name = "review/%s/%s" % (author, topic)
-    revision = review_info['currentPatchSet']['revision']
-    refspec = review_info['currentPatchSet']['ref']
 
     print("Downloading %s from gerrit into %s" % (refspec, branch_name))
-    (status, output) = run_command_status("git fetch %s %s" % (
-        remote, refspec))
-    if status != 0:
-        print(output)
-        return status
+    run_command_exc(PatchSetGitFetchFailed,
+                    "git", "fetch", remote, refspec)
 
-    checkout_cmd = "git checkout -b %s FETCH_HEAD" % branch_name
-    (status, output) = run_command_status(checkout_cmd)
-    if status != 0:
+    try:
+        output = run_command_exc(CheckoutNewBranchFailed,
+                                 "git", "checkout", "-b",
+                                 branch_name, "FETCH_HEAD")
+
+    except CheckoutNewBranchFailed, e:
         if re.search("already exists\.?", output):
             print("Branch already exists - reusing")
-            checkout_cmd = "git checkout %s" % branch_name
-            (status, output) = run_command_status(checkout_cmd)
-            if status != 0:
-                print(output)
-                return status
-            reset_cmd = "git reset --hard FETCH_HEAD"
-            (status, output) = run_command_status(reset_cmd)
-            if status != 0:
-                print(output)
-                return status
+            run_command_exc(CheckoutExistingBranchFailed,
+                            "git", "checkout", branch_name)
+            run_command_exc(ResetHardFailed,
+                            "git", "reset", "--hard", "FETCH_HEAD")
         else:
-            print(output)
-            return status
+            raise
 
     print("Switched to branch '%s'" % branch_name)
-    return 0
 
 
 def finish_branch(target_branch):
@@ -812,8 +841,8 @@ def main():
                  config['hostname'], config['port'], config['project'])
 
     if options.download is not None:
-        print_exit_message(download_review(options.download, branch, remote),
-                           needs_update)
+        download_review(options.download, branch, remote)
+        return
     elif options.list:
         print_exit_message(list_reviews(remote), needs_update)
     else:
