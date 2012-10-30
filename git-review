@@ -59,7 +59,11 @@ class colors:
     reset = '\033[0m'
 
 
-class CommandFailed(Exception):
+class GitReviewException(Exception):
+    pass
+
+
+class CommandFailed(GitReviewException):
 
     def __init__(self, *args):
         Exception.__init__(self, *args)
@@ -76,6 +80,16 @@ The following command failed with exit code %(rc)d
 -----------------------
 %(output)s
 -----------------------""" % self.quickmsg
+
+
+class ChangeSetException(GitReviewException):
+
+    def __init__(self, e):
+        GitReviewException.__init__(self)
+        self.e = str(e)
+
+    def __str__(self):
+        return self.__doc__ % self.e
 
 
 def run_command_status(*argv, **env):
@@ -861,6 +875,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except CommandFailed, e:
+    except GitReviewException, e:
         print(e)
         sys.exit(e.EXIT_CODE)
