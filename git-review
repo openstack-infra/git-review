@@ -520,6 +520,16 @@ def get_topic(target_branch):
     return branch_name
 
 
+class CannotQueryOpenChangesets(CommandFailed):
+    "Cannot fetch review information from gerrit"
+    EXIT_CODE = 32
+
+
+class CannotParseOpenChangesets(ChangeSetException):
+    "Cannot parse JSON review information from gerrit"
+    EXIT_CODE = 33
+
+
 def list_reviews(remote):
 
     (hostname, username, port, project_name) = \
@@ -535,15 +545,11 @@ def list_reviews(remote):
         userhost = "%s@%s" % (username, hostname)
 
     review_info = None
-    (status, output) = run_command_status(
+    output = run_command_exc(
+        CannotQueryOpenChangesets,
         "ssh", "-x", port, userhost,
         "gerrit", "query",
         "--format=JSON project:%s status:open" % project_name)
-
-    if status != 0:
-        print("Could not fetch review information from gerrit")
-        print(output)
-        return status
 
     review_list = []
     review_field_width = {}
@@ -569,8 +575,7 @@ def list_reviews(remote):
         except:
             if VERBOSE:
                 print(output)
-            print("Could not parse json query response:", sys.exc_info()[1])
-            return 1
+            raise(CannotParseOpenChangesets, sys.exc_info()[1])
 
         if 'type' in review_info:
             break
@@ -848,7 +853,9 @@ def main():
         download_review(options.download, branch, remote)
         return
     elif options.list:
-        print_exit_message(list_reviews(remote), needs_update)
+        list_reviews(remote)
+        return
+
     else:
         topic = options.topic
         if topic is None:
