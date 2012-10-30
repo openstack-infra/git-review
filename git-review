@@ -856,58 +856,62 @@ def main():
         list_reviews(remote)
         return
 
+    topic = options.topic
+    if topic is None:
+        topic = get_topic(branch)
+    if VERBOSE:
+        print("Found topic '%s' from parsing changes." % topic)
+
+    hook_file = get_hooks_target_file()
+
+    have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
+
+    if not have_hook:
+        set_hooks_commit_msg(remote, hook_file)
+
+    if options.setup:
+        if options.finish and not options.dry:
+            finish_branch(branch)
+        return
+
+    if options.rebase:
+        if not rebase_changes(branch, remote):
+            print_exit_message(1, needs_update)
+        if not options.force_rebase and not undo_rebase():
+            print_exit_message(1, needs_update)
+    assert_one_change(remote, branch, yes, have_hook)
+
+    ref = "publish"
+
+    if options.draft:
+        ref = "drafts"
+    elif options.compatible:
+        ref = "for"
+
+    cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
+                                              topic)
+    if options.regenerate:
+        print("Amending the commit to regenerate the change id\n")
+        regenerate_cmd = "git commit --amend"
+        if options.dry:
+            print("\tGIT_EDITOR=\"sed -i -e '/^Change-Id:/d'\" %s\n" %
+                  regenerate_cmd)
+        else:
+            run_command(regenerate_cmd,
+                        GIT_EDITOR="sed -i -e "
+                        "'/^Change-Id:/d'")
+
+    if options.dry:
+        print("Please use the following command "
+              "to send your commits to review:\n")
+        print("\t%s\n" % cmd)
     else:
-        topic = options.topic
-        if topic is None:
-            topic = get_topic(branch)
-        if VERBOSE:
-            print("Found topic '%s' from parsing changes." % topic)
+        (status, output) = run_command_status(cmd)
+        print(output)
 
-        hook_file = get_hooks_target_file()
-
-        have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
-
-        if not have_hook:
-            set_hooks_commit_msg(remote, hook_file)
-
-        if not options.setup:
-            if options.rebase:
-                if not rebase_changes(branch, remote):
-                    print_exit_message(1, needs_update)
-                if not options.force_rebase and not undo_rebase():
-                    print_exit_message(1, needs_update)
-            assert_one_change(remote, branch, yes, have_hook)
-
-            ref = "publish"
-
-            if options.draft:
-                ref = "drafts"
-            elif options.compatible:
-                ref = "for"
-
-            cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
-                                                      topic)
-            if options.regenerate:
-                print("Amending the commit to regenerate the change id\n")
-                regenerate_cmd = "git commit --amend"
-                if options.dry:
-                    print("\tGIT_EDITOR=\"sed -i -e '/^Change-Id:/d'\" %s\n" %
-                          regenerate_cmd)
-                else:
-                    run_command(regenerate_cmd,
-                                GIT_EDITOR="sed -i -e "
-                                "'/^Change-Id:/d'")
-
-            if options.dry:
-                print("Please use the following command "
-                      "to send your commits to review:\n")
-                print("\t%s\n" % cmd)
-            else:
-                (status, output) = run_command_status(cmd)
-                print(output)
-
-        if options.finish and not options.dry and status == 0:
-            status = finish_branch(branch)
+    if options.finish and not options.dry and status == 0:
+        finish_branch(branch)
+        return
 
     print_exit_message(status, needs_update)
 
