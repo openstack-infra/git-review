@@ -40,7 +40,7 @@ else:
 
 from distutils.version import StrictVersion
 
-version = "1.19"
+version = "1.20"
 
 VERBOSE = False
 UPDATE = False
