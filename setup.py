@@ -17,6 +17,7 @@
 from setuptools import setup
 from distutils.command.install import install as du_install
 from setuptools.command.install import install
+import os.path
 
 # version comes from git-review.
 savename = __name__
@@ -34,6 +35,14 @@ class git_review_install(install):
 
 git_review_cmdclass = {'install': git_review_install}
 
+manpath = 'man'
+if os.path.realpath('/usr/local/man') == '/usr/local/share/man':
+    # This works around a bug with install where it expects every node
+    # in the relative data directory to be an actual directory, since at
+    # least Debian derivatives (and probably other platforms as well)
+    # like to symlink Unixish /usr/local/man to /usr/local/share/man.
+    manpath = os.path.join('share', manpath)
+
 setup(
     name='git-review',
     version=version,
@@ -49,6 +58,6 @@ setup(
     author_email='openstack@lists.launchpad.net',
     url='https://launchpad.net/git-review',
     scripts=['git-review'],
-    data_files=[('man/man1', ['git-review.1'])],
+    data_files=[(os.path.join(manpath, 'man1'), ['git-review.1'])],
     install_requires=['argparse'],
 )
