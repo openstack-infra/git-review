@@ -497,27 +497,42 @@ def assert_one_change(remote, branch, yes, have_hook):
                 sys.exit(1)
 
 
+def use_topic(why, topic):
+    """Inform the user about why a particular topic has been selected"""
+    if VERBOSE:
+        print(why % ('"%s"' % topic,))
+    return topic
+
+
 def get_topic(target_branch):
 
     branch_name = get_branch_name(target_branch)
 
     branch_parts = branch_name.split("/")
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
-        return "/".join(branch_parts[2:])
+        return use_topic("Using change number %s "
+                         "for the topic of the change submitted",
+                         "/".join(branch_parts[2:]))
 
     log_output = run_command("git log HEAD^1..HEAD")
     bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
 
     match = re.search(bug_re, log_output)
     if match is not None:
-        return "bug/%s" % match.group(2)
+        return use_topic("Using bug number %s "
+                         "for the topic of the change submitted",
+                         "bug/%s" % match.group(2))
 
     bp_re = r'\b([Bb]lue[Pp]rint|[Bb][Pp])\s*[#:]?\s*([0-9a-zA-Z-_]+)'
     match = re.search(bp_re, log_output)
     if match is not None:
-        return "bp/%s" % match.group(2)
+        return use_topic("Using blueprint number %s "
+                         "for the topic of the change submitted",
+                         "bp/%s" % match.group(2))
 
-    return branch_name
+    return use_topic("Using local branch name %s "
+                     "for the topic of the change submitted",
+                     branch_name)
 
 
 class CannotQueryOpenChangesets(CommandFailed):
@@ -856,12 +871,6 @@ def main():
         list_reviews(remote)
         return
 
-    topic = options.topic
-    if topic is None:
-        topic = get_topic(branch)
-    if VERBOSE:
-        print("Found topic '%s' from parsing changes." % topic)
-
     hook_file = get_hooks_target_file()
 
     have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
@@ -889,7 +898,8 @@ def main():
         ref = "for"
 
     cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
-                                              topic)
+                                              options.topic
+                                              or get_topic(branch))
     if options.regenerate:
         print("Amending the commit to regenerate the change id\n")
         regenerate_cmd = "git commit --amend"
