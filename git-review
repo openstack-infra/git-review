@@ -861,6 +861,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except CommandFailed, e:
+    except CommandFailed as e:
         print(e)
         sys.exit(e.EXIT_CODE)
