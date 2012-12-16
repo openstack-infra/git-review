@@ -56,7 +56,7 @@ Example .gitreview file (used to upload for git-review itself)
     [gerrit]
     host=review.openstack.org
     port=29418
-    project=openstack-ci/git-review.git
+    project=openstack-infra/git-review.git
     defaultbranch=master
 
 Required values: host, project
@@ -75,7 +75,7 @@ For installation from source simply add git-review to your $PATH
 
 ## Contributing
 
-To get the latest code, see: https://github.com/openstack-ci/git-review
+To get the latest code, see: https://github.com/openstack-infra/git-review
 
 Bugs are handled at: https://launchpad.net/git-review
 
