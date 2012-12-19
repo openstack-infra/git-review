@@ -118,6 +118,21 @@ specific error codes are available:
 Gerrit
 .Ar commit-msg
 hook could not be successfully installed.
+.It 34
+Cannot query information about changesets.
+.It 35
+Cannot fetch information about the changeset to be downloaded.
+.It 36
+Changeset not found.
+.It 37
+Particular patchset cannot be fetched from the remote git repository.
+.It 64
+Cannot checkout downloaded patchset into the new branch.
+.It 65
+Cannot checkout downloaded patchset into existing branch.
+.It 66
+Cannot hard reset working directory and git index after download.
+.El
 .El
 .Pp
 Exit status larger than 31 indicates problem with
