@@ -67,11 +67,11 @@ class CommandFailed(GitReviewException):
 
     def __init__(self, *args):
         Exception.__init__(self, *args)
-        (rc, output, argv, envp) = args
+        (self.rc, self.output, self.argv, self.envp) = args
         self.quickmsg = dict([
-            ("argv", " ".join(argv)),
-            ("rc", rc),
-            ("output", output)])
+            ("argv", " ".join(self.argv)),
+            ("rc", self.rc),
+            ("output", self.output)])
 
     def __str__(self):
         return self.__doc__ + """
@@ -712,8 +712,8 @@ def download_review(review, masterbranch, remote):
                                  "git", "checkout", "-b",
                                  branch_name, "FETCH_HEAD")
 
-    except CheckoutNewBranchFailed, e:
-        if re.search("already exists\.?", output):
+    except CheckoutNewBranchFailed as e:
+        if re.search("already exists\.?", e.output):
             print("Branch already exists - reusing")
             run_command_exc(CheckoutExistingBranchFailed,
                             "git", "checkout", branch_name)
