@@ -712,9 +712,9 @@ def download_review(review, masterbranch, remote):
             topic = review
     except KeyError:
         topic = review
-    if review_info.get('owner'):
+    try:
         author = re.sub('\W+', '_', review_info['owner']['name']).lower()
-    else:
+    except KeyError:
         author = 'unknown'
     branch_name = "review/%s/%s" % (author, topic)
 
