@@ -163,10 +163,19 @@ def latest_is_newer():
     return False
 
 
-def get_hooks_target_file():
-    top_dir = run_command('git rev-parse --git-dir')
-    hooks_dir = os.path.join(top_dir, "hooks")
-    return os.path.join(hooks_dir, "commit-msg")
+def git_directories():
+    """Determine (absolute git work directory path, .git subdirectory path)"""
+    cmd = ("git", "rev-parse", "--show-toplevel", "--git-dir")
+    out = run_command_exc(GitDirectoriesException, *cmd)
+    try:
+        return out.split()
+    except ValueError:
+        raise GitDirectoriesException(0, out, cmd, {})
+
+
+class GitDirectoriesException(CommandFailed):
+    "Cannot determine where .git directory is"
+    EXIT_CODE = 70
 
 
 class CannotInstallHook(CommandFailed):
@@ -331,18 +340,17 @@ def check_color_support():
     return _has_color
 
 
-def get_config():
+def get_config(config_file):
     """Get the configuration options set in the .gitremote file, if present."""
     """Returns a hashmap with hostname, port, project and defaultbranch."""
     """If there is no .gitremote file, default values will be used."""
     config = dict(hostname=False, port='29418', project=False,
                   defaultbranch='master', defaultremote="gerrit",
                   defaultrebase="1")
-    top_dir = run_command('git rev-parse --show-toplevel')
-    target_file = os.path.join(top_dir, ".gitreview")
-    if os.path.exists(target_file):
+
+    if os.path.exists(config_file):
         configParser = ConfigParser.ConfigParser(config)
-        configParser.read(target_file)
+        configParser.read(config_file)
         config['hostname'] = configParser.get("gerrit", "host")
         config['port'] = configParser.get("gerrit", "port")
         config['project'] = configParser.get("gerrit", "project")
@@ -799,7 +807,9 @@ to ensure proper behavior with gerrit. Thanks!
 
 def main():
 
-    config = get_config()
+    (top_dir, git_dir) = git_directories()
+    config = get_config(os.path.join(top_dir, ".gitreview"))
+    hook_file = os.path.join(git_dir, "hooks", "commit-msg")
 
     usage = "git review [OPTIONS] ... [BRANCH]"
 
@@ -930,8 +940,6 @@ def main():
     elif options.list:
         list_reviews(remote)
         return
-
-    hook_file = get_hooks_target_file()
 
     have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
 
