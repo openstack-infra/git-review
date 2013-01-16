@@ -76,6 +76,30 @@ Optional values: port (default: 29418), defaultbranch (default: master)
 
 * git-review will create a gerrit remote upon first run
 
+Hooks
+-----
+
+git-review has a custom hook mechanism to run a script before certain
+actions. This is done in the same spirit as the classic hooks in git.
+
+There are two types of hooks, a global one which is stored in
+~/.config/git-review/hooks/ and one local to the repository stored in
+.git/hooks/ with the other git hook scripts.
+
+__The script needs be executable before getting executed__
+
+The name of the script is $action-review where action can be
+:
+
+* pre - run at first before doing anything.
+
+* post - run at the end after the review was sent.
+
+* draft - run when in draft mode.
+
+if the script returns with an exit status different than zero,
+git-review will exit with the a custom shell exit code 71.
+
 Installation
 ------------
 

@@ -178,6 +178,32 @@ class GitDirectoriesException(CommandFailed):
     EXIT_CODE = 70
 
 
+class CustomScriptException(CommandFailed):
+    """Custom script execution failed"""
+    EXIT_CODE = 71
+
+
+def run_custom_script(action):
+    """Get status and output of .git/hooks/$action-review or/and
+    ~/.config/hooks/$action-review if existing."""
+    returns = []
+    script_file = "%s-review" % (action)
+    (top_dir, git_dir) = git_directories()
+    paths = [os.path.join(CONFIGDIR, "hooks", script_file),
+             os.path.join(git_dir, "hooks", script_file)]
+    for fpath in paths:
+        if os.path.isfile(fpath) and os.access(fpath, os.X_OK):
+            status, output = run_command_status(fpath)
+            returns.append((status, output, fpath))
+
+    for (status, output, path) in returns:
+        if status is not None and status != 0:
+            raise CustomScriptException(status, output, [path], {})
+        elif output and VERBOSE:
+            print("script %s output is:" % (path))
+            print(output)
+
+
 class CannotInstallHook(CommandFailed):
     "Problems encountered installing commit-msg hook"
     EXIT_CODE = 2
@@ -854,7 +880,7 @@ def main():
                        action=DownloadFlag, metavar="CHANGE",
                        const="download",
                        help="Download the contents of an existing gerrit "
-                             "review into a branch")
+                            "review into a branch")
     fetch.add_argument("-x", "--cherrypick", dest="changeidentifier",
                        action=DownloadFlag, metavar="CHANGE",
                        const="cherrypickcommit",
@@ -890,6 +916,9 @@ def main():
                              "you are submitting more than one patch")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
                         help="Output more information about what's going on")
+    parser.add_argument("--no-custom-script", dest="custom_script",
+                        action="store_false", default=True,
+                        help="Do not run custom scripts.")
     parser.add_argument("--license", dest="license", action="store_true",
                         help="Print the license and exit")
     parser.add_argument("--version", action="version",
@@ -941,6 +970,9 @@ def main():
         list_reviews(remote)
         return
 
+    if options.custom_script:
+        run_custom_script("pre")
+
     have_hook = os.path.exists(hook_file) and os.access(hook_file, os.X_OK)
 
     if not have_hook:
@@ -962,6 +994,8 @@ def main():
 
     if options.draft:
         ref = "drafts"
+        if options.custom_script:
+            run_custom_script("draft")
     elif options.compatible:
         ref = "for"
 
@@ -991,6 +1025,8 @@ def main():
         finish_branch(branch)
         return
 
+    if options.custom_script:
+        run_custom_script("post")
     print_exit_message(status, needs_update)
 
 
