@@ -664,7 +664,7 @@ class ResetHardFailed(CommandFailed):
     EXIT_CODE = 66
 
 
-def download_review(review, masterbranch, remote):
+def fetch_review(review, masterbranch, remote):
 
     (hostname, username, port, project_name) = \
         parse_git_show(remote, "Push")
@@ -701,7 +701,6 @@ def download_review(review, masterbranch, remote):
         raise PatchSetInformationNotFound(review)
 
     try:
-        revision = review_info['currentPatchSet']['revision']
         refspec = review_info['currentPatchSet']['ref']
     except KeyError:
         raise PatchSetNotFound(review)
@@ -718,14 +717,20 @@ def download_review(review, masterbranch, remote):
         author = 'unknown'
     branch_name = "review/%s/%s" % (author, topic)
 
-    print("Downloading %s from gerrit into %s" % (refspec, branch_name))
+    print("Downloading %s from gerrit" % refspec)
     run_command_exc(PatchSetGitFetchFailed,
                     "git", "fetch", remote, refspec)
+    return branch_name
+
+
+def checkout_review(branch_name):
+    """Checkout a newly fetched (FETCH_HEAD) change
+       into a branch"""
 
     try:
-        output = run_command_exc(CheckoutNewBranchFailed,
-                                 "git", "checkout", "-b",
-                                 branch_name, "FETCH_HEAD")
+        run_command_exc(CheckoutNewBranchFailed,
+                        "git", "checkout", "-b",
+                        branch_name, "FETCH_HEAD")
 
     except CheckoutNewBranchFailed as e:
         if re.search("already exists\.?", e.output):
@@ -737,7 +742,20 @@ def download_review(review, masterbranch, remote):
         else:
             raise
 
-    print("Switched to branch '%s'" % branch_name)
+    print("Switched to branch \"%s\"" % branch_name)
+
+
+class PatchSetGitCherrypickFailed(CommandFailed):
+    "There was a problem applying changeset contents to the current branch."
+    EXIT_CODE = 69
+
+
+def cherrypick_review(option=None):
+    cmd = ["git", "cherry-pick"]
+    if option:
+        cmd.append(option)
+    cmd.append("FETCH_HEAD")
+    print(run_command_exc(PatchSetGitCherrypickFailed, *cmd))
 
 
 class CheckoutBackExistingBranchFailed(CommandFailed):
@@ -787,6 +805,14 @@ def main():
     usage = "git review [OPTIONS] ... [BRANCH]"
 
     import argparse
+
+    class DownloadFlag(argparse.Action):
+        """Additional option parsing: store value in 'dest', but
+           at the same time set one of the flag options to True"""
+        def __call__(self, parser, namespace, values, option_string=None):
+            setattr(namespace, self.dest, values)
+            setattr(namespace, self.const, True)
+
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
 
     parser.add_argument("-t", "--topic", dest="topic",
@@ -811,9 +837,35 @@ def main():
     parser.add_argument("-F", "--force-rebase", dest="force_rebase",
                         action="store_true",
                         help="Force rebase even when not needed.")
-    parser.add_argument("-d", "--download", dest="download",
-                        help="Download the contents of an existing gerrit "
+
+    fetch = parser.add_mutually_exclusive_group()
+    fetch.set_defaults(download=False, cherrypickcommit=False,
+                       cherrypickindicate=False, cherrypickonly=False)
+    fetch.add_argument("-d", "--download", dest="changeidentifier",
+                       action=DownloadFlag, metavar="CHANGE",
+                       const="download",
+                       help="Download the contents of an existing gerrit "
                              "review into a branch")
+    fetch.add_argument("-x", "--cherrypick", dest="changeidentifier",
+                       action=DownloadFlag, metavar="CHANGE",
+                       const="cherrypickcommit",
+                       help="Apply the contents of an existing gerrit "
+                             "review onto the current branch and commit "
+                             "(cherry pick; not recommended in most "
+                             "situations)")
+    fetch.add_argument("-X", "--cherrypickindicate", dest="changeidentifier",
+                       action=DownloadFlag, metavar="CHANGE",
+                       const="cherrypickindicate",
+                       help="Apply the contents of an existing gerrit "
+                       "review onto the current branch and commit, "
+                       "indicating its origin")
+    fetch.add_argument("-N", "--cherrypickonly", dest="changeidentifier",
+                       action=DownloadFlag, metavar="CHANGE",
+                       const="cherrypickonly",
+                       help="Apply the contents of an existing gerrit "
+                       "review to the working directory and prepare "
+                       "for commit")
+
     parser.add_argument("-u", "--update", dest="update", action="store_true",
                         help="Force updates from remote locations")
     parser.add_argument("-s", "--setup", dest="setup", action="store_true",
@@ -864,8 +916,17 @@ def main():
     check_remote(branch, remote,
                  config['hostname'], config['port'], config['project'])
 
-    if options.download is not None:
-        download_review(options.download, branch, remote)
+    if options.changeidentifier:
+        local_branch = fetch_review(options.changeidentifier, branch, remote)
+        if options.download:
+            checkout_review(local_branch)
+        else:
+            if options.cherrypickcommit:
+                cherrypick_review()
+            elif options.cherrypickonly:
+                cherrypick_review("-n")
+            if options.cherrypickindicate:
+                cherrypick_review("-x")
         return
     elif options.list:
         list_reviews(remote)

@@ -13,6 +13,21 @@
 .Op Ar branch
 .Nm
 .Op Fl r Ar remote
+.Op Fl uv
+.Fl x Ar change
+.Op Ar branch
+.Nm
+.Op Fl r Ar remote
+.Op Fl uv
+.Fl N Ar change
+.Op Ar branch
+.Nm
+.Op Fl r Ar remote
+.Op Fl uv
+.Fl X Ar change
+.Op Ar branch
+.Nm
+.Op Fl r Ar remote
 .Op Fl fnuv
 .Fl s
 .Op Ar branch
@@ -39,6 +54,39 @@ Download
 from Gerrit
 into a local branch. The branch will be named after the patch author and the name of a topic.
 If the local branch already exists, it will attempt to update with the latest patchset for this change.
+.It Fl x Ar change , Fl -cherrypick= Ns Ar change
+Apply
+.Ar change
+from Gerrit and commit into the current local branch ("cherry pick").
+No additional branch is created.
+.Pp
+This makes it possible to review a change without creating a local branch for
+it. On the other hand, be aware: if you are not careful, this can easily result
+in additional patch sets for dependent changes. Also, if the current branch is
+different enough, the change may not apply at all or produce merge conflicts
+that need to be resolved by hand.
+.It Fl N Ar change , Fl -cherrypickonly= Ns Ar change
+Apply
+.Ar change
+from Gerrit
+into the current working directory, add it to the staging area ("git index"), but do not commit it.
+.Pp
+This makes it possible to review a change without creating a local commit for
+it. Useful if you want to merge several commits into one that will be submitted for review.
+.Pp
+If the current branch is different enough, the change may not apply at all
+or produce merge conflicts that need to be resolved by hand.
+.It Fl X Ar change , Fl -cherrypickindicate= Ns Ar change
+Apply
+.Ar change
+from Gerrit and commit into the current local branch ("cherry pick"),
+indicating which commit this change was cherry-picked from.
+.Pp
+This makes it possible to re-review a change for a different branch without
+creating a local branch for it.
+.Pp
+If the current branch is different enough, the change may not apply at all
+or produce merge conflicts that need to be resolved by hand.
 .It Fl f , Fl -finish
 Close down the local branch and switch back to the target branch on
 successful submission.
@@ -72,7 +120,7 @@ When submitting a change for review, you will usually want it to be based on the
 Print the version number and exit.
 .El
 .Sh FILES
-To use 
+To use
 .Nm
 with your project, it is recommended that you create
 a file at the root of the repository named
@@ -86,16 +134,16 @@ project=\fIproject name\fP
 defaultbranch=\fIbranch to work on\fP
 .Ed
 .Pp
-It is also possible to specify optional default name for 
+It is also possible to specify optional default name for
 the Git remote using the
 .Cm defaultremote
-configuration parameter. 
+configuration parameter.
 .Pp
 Setting
 .Cm defaultrebase
 to zero will make
 .Nm
-not to rebase changes by default (same as the 
+not to rebase changes by default (same as the
 .Fl R
 command line option)
 .Bd -literal -offset indent
@@ -141,6 +189,12 @@ Cannot switch to some other branch when trying to finish
 the current branch.
 .It 68
 Cannot delete current branch.
+.It 69
+Requested patchset cannot be fully applied to the current branch.  This exit
+status will be returned when there are merge conflicts with the current branch.
+Possible reasons include an attempt to apply patchset from the different branch
+or code.  This exit status will also be returned if the patchset is already
+applied to the current branch.
 .El
 .Pp
 Exit status larger than 31 indicates problem with
@@ -176,7 +230,7 @@ $ git branch
 * master
 .Ed
 .Pp
-An example 
+An example
 .Pa .gitreview
 configuration file for a project
 .Pa department/project
