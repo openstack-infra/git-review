@@ -453,7 +453,6 @@ def get_branch_name(target_branch):
 
 
 def assert_one_change(remote, branch, yes, have_hook):
-    update_remote(remote)
     branch_name = get_branch_name(branch)
     has_color = check_color_support()
     if has_color:
