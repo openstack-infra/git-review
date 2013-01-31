@@ -119,6 +119,25 @@ When submitting a change for review, you will usually want it to be based on the
 .It Fl -version
 Print the version number and exit.
 .El
+.Sh CONFIGURATION
+This utility can be configured by adding entries to Git configuration.
+.Pp
+The following configuration keys are supported:
+.Bl -tag
+.It gitreview.username
+Default username used to access the repository. If not specified
+in the Git configuration, Git remote or
+.Pa .gitreview
+file, the user will be prompted to specify the username.
+.Pp
+Example entry in the
+.Pa .gitconfig
+file:
+.Bd -literal -offset indent
+[gitreview]
+username=\fImygerrituser\fP
+.Ed
+.El
 .Sh FILES
 To use
 .Nm
