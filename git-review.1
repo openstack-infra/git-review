@@ -46,6 +46,12 @@ designed to make it easier to apprehend Gerrit, especially for
 users that have recently switched to Git from another version
 control system.
 .Pp
+.Ar change
+can be changeNumber as obtained using
+.Fl --list
+option, or it can be changeNumber,patchsetNumber for fetching exact patchset from the change.
+In that case local branch will get -patch[patchsetNumber] suffix.
+.Pp
 The following options are available:
 .Bl -tag -width indent
 .It Fl d Ar change , Fl -download= Ns Ar change
@@ -197,6 +203,8 @@ Cannot fetch information about the changeset to be downloaded.
 Changeset not found.
 .It 37
 Particular patchset cannot be fetched from the remote git repository.
+.It 38
+Specified patchset number not found in the changeset.
 .It 64
 Cannot checkout downloaded patchset into the new branch.
 .It 65
@@ -238,6 +246,18 @@ $ git branch
 .Pp
 Gerrit looks up both name of the author and the topic name from Gerrit
 to name a local branch. This facilitates easier identification of changes.
+.Pp
+To fetch a remote patchset number 5 from change number 3004:
+.Pp
+.Bd -literal -offset indent
+$ git-review -d 3004,5
+Downloading refs/changes/04/3004/5 from gerrit into
+review/someone/topic_name-patch5
+Switched to branch 'review/someone/topic_name-patch5
+$ git branch
+  master
+* review/author/topic_name-patch5
+.Ed
 .Pp
 To send a change for review and delete local branch afterwards:
 .Bd -literal -offset indent

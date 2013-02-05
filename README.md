@@ -49,6 +49,10 @@ If you want to download change 781 from gerrit to review it::
 
     git review -d 781
 
+If you want to download patchset 4 for change 781 from gerrit to review it::
+
+    git review -d 781,4
+
 If you just want to do the commit message and remote setup steps::
 
     git review -s

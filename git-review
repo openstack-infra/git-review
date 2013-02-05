@@ -639,12 +639,12 @@ class CannotQueryPatchSet(CommandFailed):
     EXIT_CODE = 34
 
 
-class PatchSetInformationNotFound(ChangeSetException):
+class ReviewInformationNotFound(ChangeSetException):
     "Could not fetch review information for change %s"
     EXIT_CODE = 35
 
 
-class PatchSetNotFound(ChangeSetException):
+class ReviewNotFound(ChangeSetException):
     "Gerrit review %s not found"
     EXIT_CODE = 36
 
@@ -654,6 +654,11 @@ class PatchSetGitFetchFailed(CommandFailed):
 
 Does specified change number belong to this project?"""
     EXIT_CODE = 37
+
+
+class PatchSetNotFound(ChangeSetException):
+    "Review patchset %s not found"
+    EXIT_CODE = 38
 
 
 class CheckoutNewBranchFailed(CommandFailed):
@@ -685,12 +690,19 @@ def fetch_review(review, masterbranch, remote):
     else:
         userhost = "%s@%s" % (username, hostname)
 
+    review_arg = review
+    patchset_number = None
+    patchset_opt = '--current-patch-set'
+    if ',' in review:
+        review, patchset_number = review.split(',')
+        patchset_opt = '--patch-sets'
+
     review_info = None
     output = run_command_exc(
         CannotQueryPatchSet,
         "ssh", "-x", port, userhost,
         "gerrit", "query",
-        "--format=JSON --current-patch-set change:%s" % review)
+        "--format=JSON %s change:%s" % (patchset_opt, review))
 
     review_jsons = output.split("\n")
     found_review = False
@@ -705,12 +717,19 @@ def fetch_review(review, masterbranch, remote):
     if not found_review:
         if VERBOSE:
             print(output)
-        raise PatchSetInformationNotFound(review)
+        raise ReviewInformationNotFound(review)
 
     try:
-        refspec = review_info['currentPatchSet']['ref']
+        if patchset_number is None:
+            refspec = review_info['currentPatchSet']['ref']
+        else:
+            refspec = [ps for ps
+                       in review_info['patchSets']
+                       if ps['number'] == patchset_number][0]['ref']
+    except IndexError:
+        raise PatchSetNotFound(review_arg)
     except KeyError:
-        raise PatchSetNotFound(review)
+        raise ReviewNotFound(review)
 
     try:
         topic = review_info['topic']
@@ -722,7 +741,11 @@ def fetch_review(review, masterbranch, remote):
         author = re.sub('\W+', '_', review_info['owner']['name']).lower()
     except KeyError:
         author = 'unknown'
-    branch_name = "review/%s/%s" % (author, topic)
+
+    if patchset_number is None:
+        branch_name = "review/%s/%s" % (author, topic)
+    else:
+        branch_name = "review/%s/%s-patch%s" % (author, topic, patchset_number)
 
     print("Downloading %s from gerrit" % refspec)
     run_command_exc(PatchSetGitFetchFailed,
