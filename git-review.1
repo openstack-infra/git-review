@@ -179,6 +179,27 @@ file:
 [gitreview]
 username=\fImygerrituser\fP
 .Ed
+.It gireview.rebase
+This setting determines whether changes submitted will
+be rebased to the newest state of the branch.
+.Pp
+A value of 'true' or 'false' should be specified.
+.Bl -tag
+.It false
+Do not rebase changes on submit - equivalent to setting
+.Fl R
+when submitting changes.
+.It true
+Do rebase changes on submit. This is the default value unless
+overridden by
+.Pa .gitreview
+file.
+.El
+.Pp
+This setting takes precedence over repository-specific configuration
+in the
+.Pa .gitreview
+file.
 .El
 .Sh FILES
 To use
