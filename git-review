@@ -500,7 +500,7 @@ def assert_one_change(remote, branch, yes, have_hook):
         use_color = "--color=%s" % color
     else:
         use_color = ""
-    cmd = "git log %s --decorate --oneline HEAD --not remotes/%s/%s" % (
+    cmd = "git log %s --decorate --oneline HEAD --not remotes/%s/%s --" % (
         use_color, remote, branch)
     (status, output) = run_command_status(cmd)
     if status != 0:
