@@ -28,6 +28,12 @@
 .Op Ar branch
 .Nm
 .Op Fl r Ar remote
+.Op Fl uv
+.Fl m
+.Ar change-ps-range
+.Op Ar branch
+.Nm
+.Op Fl r Ar remote
 .Op Fl fnuv
 .Fl s
 .Op Ar branch
@@ -47,10 +53,14 @@ users that have recently switched to Git from another version
 control system.
 .Pp
 .Ar change
-can be changeNumber as obtained using
+can be
+.Ar changeNumber
+as obtained using
 .Fl --list
-option, or it can be changeNumber,patchsetNumber for fetching exact patchset from the change.
-In that case local branch will get -patch[patchsetNumber] suffix.
+option, or it can be 
+.Ar changeNumber,patchsetNumber
+for fetching exact patchset from the change.
+In that case local branch name will have a -patch[patchsetNumber] suffix.
 .Pp
 The following options are available:
 .Bl -tag -width indent
@@ -93,6 +103,28 @@ creating a local branch for it.
 .Pp
 If the current branch is different enough, the change may not apply at all
 or produce merge conflicts that need to be resolved by hand.
+.It Fl m Ar change-ps-range , Fl -compare= Ns Ar change-ps-range
+Download the specified  patchsets for
+.Ar change
+from Gerrit, rebase both on master and display differences (git-diff).
+.Pp
+.Ar change-ps-range
+can be specified as
+.Ar changeNumber, Ns Ar oldPatchSetNumber Ns Op Ns Ar -newPatchSetNumber
+.Pp
+.Ar oldPatchSetNumber
+is mandatory, and if
+.Ar newPatchSetNumber
+is not specified, the latest patchset will be used.
+.Pp
+This makes it possible to easily compare what has changed from last time you
+reviewed the proposed change.
+.Pp
+If the master branch is different enough, the rebase can produce merge conflicts.
+If that happens rebasing will be aborted and diff displayed for not-rebased branches.
+You can also use
+.Ar --no-rebase ( Ar -R )
+to always skip rebasing.
 .It Fl f , Fl -finish
 Close down the local branch and switch back to the target branch on
 successful submission.
@@ -122,6 +154,10 @@ Do not automatically perform a rebase before submitting the change to
 Gerrit.
 .Pp
 When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
+.Pp
+Also can be used for
+.Fl --compare
+to skip automatic rebase of fetched reviews.
 .It Fl -version
 Print the version number and exit.
 .El
@@ -205,6 +241,8 @@ Changeset not found.
 Particular patchset cannot be fetched from the remote git repository.
 .It 38
 Specified patchset number not found in the changeset.
+.It 39
+Invalid patchsets for comparison.
 .It 64
 Cannot checkout downloaded patchset into the new branch.
 .It 65
@@ -300,3 +338,4 @@ is maintained by
 This manpage has been enhanced by:
 .An "Antoine Musso" Aq hashar@free.fr
 .An "Marcin Cieslak" Aq saper@saper.info
+.An "Pavel Sedlák" Aq psedlak@redhat.com
