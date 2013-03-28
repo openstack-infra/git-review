@@ -1097,9 +1097,10 @@ def main():
     elif options.compatible:
         ref = "for"
 
-    cmd = "git push %s HEAD:refs/%s/%s/%s" % (remote, ref, branch,
-                                              options.topic
-                                              or get_topic(branch))
+    cmd = "git push %s HEAD:refs/%s/%s" % (remote, ref, branch)
+    topic = options.topic or get_topic(branch)
+    if topic != branch:
+        cmd += "/%s" % topic
     if options.regenerate:
         print("Amending the commit to regenerate the change id\n")
         regenerate_cmd = "git commit --amend"
