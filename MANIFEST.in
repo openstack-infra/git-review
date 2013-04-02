@@ -1,6 +1,6 @@
 include README.md
 include LICENSE
 include AUTHORS
-include HACKING
+include HACKING.rst
 include git-review.1
 include tox.ini
