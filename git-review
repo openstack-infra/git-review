@@ -44,7 +44,7 @@ else:
 
 from distutils import version as du_version
 
-version = "1.21"
+version = "1.22"
 
 VERBOSE = False
 UPDATE = False
