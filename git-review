@@ -917,6 +917,11 @@ def finish_branch(target_branch):
     print("Deleted branch '%s'" % local_branch)
 
 
+def convert_bool(one_or_zero):
+    "Return a bool on a one or zero string."
+    return one_or_zero in ["1", "true", "True"]
+
+
 def print_exit_message(status, needs_update):
 
     if needs_update:
@@ -938,6 +943,10 @@ def main():
     (top_dir, git_dir) = git_directories()
     config = get_config(os.path.join(top_dir, ".gitreview"))
     hook_file = os.path.join(git_dir, "hooks", "commit-msg")
+
+    defaultrebase = convert_bool(
+        git_config_get_value("gitreview", "rebase",
+                             default=str(config['defaultrebase'])))
 
     usage = "git review [OPTIONS] ... [BRANCH]"
 
@@ -1037,7 +1046,7 @@ def main():
     parser.add_argument("branch", nargs="?", default=config['defaultbranch'])
     parser.set_defaults(dry=False,
                         draft=False,
-                        rebase=config['defaultrebase'],
+                        rebase=defaultrebase,
                         verbose=False,
                         update=False,
                         setup=False,
