@@ -268,6 +268,9 @@ Exit status larger than 31 indicates problem with
 communication with Gerrit or remote Git repository,
 exit status larger than 63 means there was a problem with
 a local repository or a working copy.
+
+Exit status larger than or equal to 128 means internal
+error in running the "git" command.
 .Pp
 .Sh EXAMPLES
 To fetch a remote change number 3004:

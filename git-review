@@ -217,6 +217,23 @@ def run_custom_script(action):
             print(output)
 
 
+def git_config_get_value(section, option, default=None):
+    try:
+        return run_command_exc(GitConfigException,
+                               "git", "config",
+                               "--get",
+                               "%s.%s" % (section, option)).strip()
+    except GitConfigException as exc:
+        if exc.rc == 1:
+            return default
+        raise
+
+
+class GitConfigException(CommandFailed):
+    """Git config value retrieval failed."""
+    EXIT_CODE = 128
+
+
 class CannotInstallHook(CommandFailed):
     "Problems encountered installing commit-msg hook"
     EXIT_CODE = 2
@@ -294,7 +311,7 @@ def add_remote(hostname, port, project, remote):
 
     username = os.getenv("USERNAME")
     if not username:
-        username = run_command('git config --get gitreview.username')
+        username = git_config_get_value("gitreview", "username")
     if not username:
         username = os.getenv("USER")
     if port is None:
@@ -360,11 +377,6 @@ def parse_git_show(remote, verb):
         port = 22
 
     return (hostname, username, str(port), project_name)
-
-
-def git_config_get_value(section, option):
-    cmd = "git config --get %s.%s" % (section, option)
-    return run_command(cmd).strip()
 
 
 def check_color_support():
@@ -507,8 +519,12 @@ def get_branch_name(target_branch):
 def assert_one_change(remote, branch, yes, have_hook):
     has_color = check_color_support()
     if has_color:
-        color = git_config_get_value("color", "ui").lower()
-        if(color == "" or color == "true"):
+        color = git_config_get_value("color", "ui")
+        if color is None:
+            color = "auto"
+        else:
+            color = color.lower()
+        if (color == "" or color == "true"):
             color = "auto"
         elif color == "false":
             color = "never"
