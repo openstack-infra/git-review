@@ -28,17 +28,21 @@ import sys
 import time
 
 if sys.version < '3':
-    from urllib import urlopen
-    from urlparse import urlparse
     import ConfigParser
+    import urllib
+    import urlparse
+    urlopen = urllib.urlopen
+    urlparse = urlparse.urlparse
     do_input = raw_input
 else:
-    from urllib.request import urlopen
-    from urllib.parse import urlparse
     import configparser as ConfigParser
+    import urllib.parse
+    import urllib.request
+    urlopen = urllib.request.urlopen
+    urlparse = urllib.parse.urlparse
     do_input = input
 
-from distutils.version import StrictVersion
+from distutils import version as du_version
 
 version = "1.21"
 
@@ -127,7 +131,8 @@ def run_command(*argv, **env):
 def run_command_exc(klazz, *argv, **env):
     """Run command *argv, on failure raise 'klazz
 
-    klass should be derived from CommandFailed"""
+    klass should be derived from CommandFailed
+    """
     (rc, output) = run_command_status(*argv, **env)
     if rc != 0:
         raise klazz(rc, output, argv, env)
@@ -135,7 +140,7 @@ def run_command_exc(klazz, *argv, **env):
 
 
 def update_latest_version(version_file_path):
-    """ Cache the latest version of git-review for the upgrade check. """
+    """Cache the latest version of git-review for the upgrade check."""
 
     if not os.path.exists(CONFIGDIR):
         os.makedirs(CONFIGDIR)
@@ -147,7 +152,7 @@ def update_latest_version(version_file_path):
     latest_version = version
     try:
         latest_version = json.load(urlopen(PYPI_URL))['info']['version']
-    except:
+    except Exception:
         pass
 
     with open(version_file_path, "w") as version_file:
@@ -155,7 +160,7 @@ def update_latest_version(version_file_path):
 
 
 def latest_is_newer():
-    """ Check if there is a new version of git-review. """
+    """Check if there is a new version of git-review."""
 
     # Skip version check if distro package turns it off
     if os.path.exists(GLOBAL_CONFIG):
@@ -170,14 +175,14 @@ def latest_is_newer():
 
     latest_version = None
     with open(version_file_path, "r") as version_file:
-        latest_version = StrictVersion(version_file.read())
-    if latest_version > StrictVersion(version):
+        latest_version = du_version.StrictVersion(version_file.read())
+    if latest_version > du_version.StrictVersion(version):
         return True
     return False
 
 
 def git_directories():
-    """Determine (absolute git work directory path, .git subdirectory path)"""
+    """Determine (absolute git work directory path, .git subdirectory path)."""
     cmd = ("git", "rev-parse", "--show-toplevel", "--git-dir")
     out = run_command_exc(GitDirectoriesException, *cmd)
     try:
@@ -187,18 +192,19 @@ def git_directories():
 
 
 class GitDirectoriesException(CommandFailed):
-    "Cannot determine where .git directory is"
+    "Cannot determine where .git directory is."
     EXIT_CODE = 70
 
 
 class CustomScriptException(CommandFailed):
-    """Custom script execution failed"""
+    """Custom script execution failed."""
     EXIT_CODE = 71
 
 
 def run_custom_script(action):
     """Get status and output of .git/hooks/$action-review or/and
-    ~/.config/hooks/$action-review if existing."""
+    ~/.config/hooks/$action-review if existing.
+    """
     returns = []
     script_file = "%s-review" % (action)
     (top_dir, git_dir) = git_directories()
@@ -240,7 +246,7 @@ class CannotInstallHook(CommandFailed):
 
 
 def set_hooks_commit_msg(remote, target_file):
-    """ Install the commit message hook if needed. """
+    """Install the commit message hook if needed."""
 
     # Create the hooks directory if it's not there already
     hooks_dir = os.path.dirname(target_file)
@@ -272,7 +278,7 @@ def set_hooks_commit_msg(remote, target_file):
 
 
 def test_remote(username, hostname, port, project):
-    """ Tests that a possible gerrit remote works """
+    """Tests that a possible gerrit remote works."""
 
     if port is not None:
         port = "-p %s" % port
@@ -298,7 +304,7 @@ def test_remote(username, hostname, port, project):
 
 
 def make_remote_url(username, hostname, port, project):
-    """ Builds a gerrit remote URL """
+    """Builds a gerrit remote URL."""
     if username is None:
         return "ssh://%s:%s/%s" % (hostname, port, project)
     else:
@@ -306,7 +312,7 @@ def make_remote_url(username, hostname, port, project):
 
 
 def add_remote(hostname, port, project, remote):
-    """ Adds a gerrit remote. """
+    """Adds a gerrit remote."""
     asked_for_username = False
 
     username = os.getenv("USERNAME")
@@ -460,7 +466,7 @@ def check_remote(branch, remote, hostname, port, project):
     # Gerrit remote not present, try to add it
     try:
         add_remote(hostname, port, project, remote)
-    except:
+    except Exception:
         print(sys.exc_info()[2])
         print("We don't know where your gerrit is. Please manually create ")
         print("a remote named \"%s\" and try again." % remote)
@@ -564,7 +570,7 @@ def assert_one_change(remote, branch, yes, have_hook):
 
 
 def use_topic(why, topic):
-    """Inform the user about why a particular topic has been selected"""
+    """Inform the user about why a particular topic has been selected."""
     if VERBOSE:
         print(why % ('"%s"' % topic,))
     return topic
@@ -653,7 +659,7 @@ def list_reviews(remote):
             continue
         try:
             review_info = json.loads(line)
-        except:
+        except Exception:
             if VERBOSE:
                 print(output)
             raise(CannotParseOpenChangesets, sys.exc_info()[1])
@@ -711,7 +717,8 @@ class ReviewNotFound(ChangeSetException):
 class PatchSetGitFetchFailed(CommandFailed):
     """Cannot fetch patchset contents
 
-Does specified change number belong to this project?"""
+Does specified change number belong to this project?
+"""
     EXIT_CODE = 37
 
 
@@ -769,7 +776,7 @@ def fetch_review(review, masterbranch, remote):
         try:
             review_info = json.loads(review_json)
             found_review = True
-        except:
+        except Exception:
             pass
         if found_review:
             break
@@ -814,7 +821,8 @@ def fetch_review(review, masterbranch, remote):
 
 def checkout_review(branch_name):
     """Checkout a newly fetched (FETCH_HEAD) change
-       into a branch"""
+       into a branch
+    """
 
     try:
         run_command_exc(CheckoutNewBranchFailed,
@@ -954,7 +962,8 @@ def main():
 
     class DownloadFlag(argparse.Action):
         """Additional option parsing: store value in 'dest', but
-           at the same time set one of the flag options to True"""
+           at the same time set one of the flag options to True
+        """
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, values)
             setattr(namespace, self.const, True)

@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
-from distutils.command.install import install as du_install
-from setuptools.command.install import install
+from distutils.command import install as du_install
 import os.path
+import setuptools
+from setuptools.command import install
 import sys
 
 version = None
@@ -28,12 +28,12 @@ exec(open("git-review").read())
 __name__ = savename
 
 
-class git_review_install(install):
+class git_review_install(install.install):
     # Force single-version-externally-managed
     # This puts the manpage in the right location (instead of buried
     # in an egg)
     def run(self):
-        return du_install.run(self)
+        return du_install.install.run(self)
 
 git_review_cmdclass = {'install': git_review_install}
 
@@ -45,7 +45,7 @@ if os.path.exists(os.path.join(sys.prefix, 'man')):
     # like to symlink Unixish /usr/local/man to /usr/local/share/man.
     manpath = 'man'
 
-setup(
+setuptools.setup(
     name='git-review',
     version=version,
     cmdclass=git_review_cmdclass,
