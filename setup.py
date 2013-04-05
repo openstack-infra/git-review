@@ -20,6 +20,7 @@ from setuptools.command.install import install
 import os.path
 import sys
 
+version = None
 # version comes from git-review.
 savename = __name__
 __name__ = "not-main"
