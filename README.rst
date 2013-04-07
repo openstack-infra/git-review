@@ -94,7 +94,7 @@ There are two types of hooks, a global one which is stored in
 ~/.config/git-review/hooks/ and one local to the repository stored in
 .git/hooks/ with the other git hook scripts.
 
-__The script needs be executable before getting executed__
+**The script needs be executable before getting executed**
 
 The name of the script is $action-review where action can be
 :
