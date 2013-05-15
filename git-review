@@ -50,8 +50,12 @@ VERBOSE = False
 UPDATE = False
 CONFIGDIR = os.path.expanduser("~/.config/git-review")
 GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
+USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
+DEFAULTS = dict(hostname=False, port='29418', project=False,
+                defaultbranch='master', defaultremote="gerrit",
+                defaultrebase="1")
 
 _branch_name = None
 _has_color = None
@@ -398,26 +402,34 @@ def check_color_support():
 
 
 def get_config(config_file):
-    """Get the configuration options set in the .gitremote file, if present."""
-    """Returns a hashmap with hostname, port, project and defaultbranch."""
-    """If there is no .gitremote file, default values will be used."""
-    config = dict(hostname=False, port='29418', project=False,
-                  defaultbranch='master', defaultremote="gerrit",
-                  defaultrebase="1")
+    """Generate the configuration map by starting with some built-in defaults
+    and then loading GLOBAL_CONFIG, USER_CONFIG, and a repository-specific
+    .gitreview file, if they exist. In case of conflict, the configuration file
+    with the narrowest scope wins.
+    """
+    config = DEFAULTS.copy()
+    for filename in (GLOBAL_CONFIG, USER_CONFIG, config_file):
+        if os.path.exists(filename):
+            config.update(load_config_file(filename))
+    return config
 
-    if os.path.exists(config_file):
-        configParser = ConfigParser.ConfigParser(config)
-        configParser.read(config_file)
-        config['hostname'] = configParser.get("gerrit", "host")
-        config['port'] = configParser.get("gerrit", "port")
-        config['project'] = configParser.get("gerrit", "project")
-        config['defaultbranch'] = configParser.get("gerrit", "defaultbranch")
-        if configParser.has_option("gerrit", "defaultremote"):
-            config['defaultremote'] = configParser.get("gerrit",
-                                                       "defaultremote")
-        if configParser.has_option("gerrit", "defaultrebase"):
-            config['defaultrebase'] = configParser.getboolean("gerrit",
-                                                              "defaultrebase")
+
+def load_config_file(config_file):
+    """Load configuration options from a file."""
+    configParser = ConfigParser.ConfigParser()
+    configParser.read(config_file)
+    options = {
+        'hostname': 'host',
+        'port': 'port',
+        'project': 'project',
+        'defaultbranch': 'defaultbranch',
+        'defaultremote': 'defaultremote',
+        'defaultrebase': 'defaultrebase',
+    }
+    config = {}
+    for config_key, option_name in options.items():
+        if configParser.has_option('gerrit', option_name):
+            config[config_key] = configParser.get('gerrit', option_name)
     return config
 
 
@@ -448,7 +460,7 @@ def check_remote(branch, remote, hostname, port, project):
         remotes = run_command("git branch -a %s" % color_never).split("\n")
         for current_remote in remotes:
             if (current_remote.strip() == "remotes/%s/%s" % (remote, branch)
-                and not UPDATE):
+                    and not UPDATE):
                 return
         # We have the remote, but aren't set up to fetch. Fix it
         if VERBOSE:
@@ -460,7 +472,7 @@ def check_remote(branch, remote, hostname, port, project):
         # This means there was no .gitreview file
         print("No '.gitreview' file found in this repository.")
         print("We don't know where your gerrit is. Please manually create ")
-        print("a remote named gerrit and try again.")
+        print("a remote named \"%s\" and try again." % remote)
         sys.exit(1)
 
     # Gerrit remote not present, try to add it
