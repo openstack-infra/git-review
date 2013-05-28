@@ -9,14 +9,18 @@ review.
 Setup
 -----
 
-git-review, by default, looks for a git remote called gerrit, and
-submits the current branch to HEAD:refs/for/master at that remote.
+By default, git-review will look for a remote named 'gerrit' for working
+with Gerrit. If the remote exists, git-review will submit the current
+branch to HEAD:refs/for/master at that remote.
 
-If the "gerrit" remote does not exist, git-review looks for a file
+If the Gerrit remote does not exist, git-review looks for a file
 called .gitreview at the root of the repository with information about
 the gerrit remote.  Assuming that file is present, git-review should
 be able to automatically configure your repository the first time it
 is run.
+
+The name of the Gerrit remote is configurable; see the configuration
+section below.
 
 Usage
 -----
@@ -74,15 +78,23 @@ Example .gitreview file (used to upload for git-review itself)::
 
 Required values: host, project
 
-Optional values: port (default: 29418), defaultbranch (default: master)
+Optional values: port (default: 29418), defaultbranch (default: master),
+defaultremote (default: gerrit).
 
 **Notes**
 
-* Username not required because it is requested on first run
+* Username is not required because it is requested on first run
 
-* Unlike git config files there cannot be any whitespace before the name of the variable.
+* Unlike git config files, there cannot be any whitespace before the name
+  of the variable.
 
-* git-review will create a gerrit remote upon first run
+* Upon first run, git-review will create a remote for working with Gerrit,
+  if it does not already exist. By default, the remote name is 'gerrit',
+  but this can be overridden with the 'defaultremote' configuration
+  option.
+
+* You can specify different values to be used as defaults in
+  ~/.config/git-review/git-review.conf or /etc/git-review/git-review.conf.
 
 Hooks
 -----
