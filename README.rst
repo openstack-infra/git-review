@@ -142,4 +142,4 @@ Use ``git review`` to submit patches (after creating a gerrit account that links
 
     # Do your commits
     git review
-    # Enter your username if promped
+    # Enter your username if prompted
