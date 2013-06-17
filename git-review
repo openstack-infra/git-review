@@ -570,14 +570,16 @@ def assert_one_change(remote, branch, yes, have_hook):
         sys.exit(1)
     elif output_lines > 1:
         if not yes:
-            print("You have more than one commit"
-                  " that you are about to submit.")
+            print("You are about to submit multiple commits. This is expected"
+                  " if you are submitting a commit that is dependant on one"
+                  " or more in-review commits. Otherwise you should consider"
+                  " squashing your changes into one commit before"
+                  " submitting.")
             print("The outstanding commits are:\n\n%s\n" % output)
-            print("Is this really what you meant to do?")
-            yes_no = do_input("Type 'yes' to confirm: ")
+            print("Do you really want to submit the above commits?")
+            yes_no = do_input("Type 'yes' to confirm, other to cancel: ")
             if yes_no.lower().strip() != "yes":
                 print("Aborting.")
-                print("Please rebase/squash your changes and try again")
                 sys.exit(1)
 
 
