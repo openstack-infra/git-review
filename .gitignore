@@ -4,6 +4,8 @@ git_review.egg-info
 MANIFEST
 AUTHORS
 ChangeLog
+.gerrit
+.testrepository
 .tox
 .venv
 *.egg
