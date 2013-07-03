@@ -21,6 +21,7 @@ limitations under the License."""
 import datetime
 import json
 import os
+import pkg_resources
 import re
 import shlex
 import subprocess
@@ -41,8 +42,6 @@ else:
     urlopen = urllib.request.urlopen
     urlparse = urllib.parse.urlparse
     do_input = input
-
-version = "1.23"
 
 VERBOSE = False
 UPDATE = False
@@ -143,6 +142,12 @@ def run_command_exc(klazz, *argv, **env):
     if rc != 0:
         raise klazz(rc, output, argv, env)
     return output
+
+
+def get_version():
+    requirement = pkg_resources.Requirement.parse('git-review')
+    provider = pkg_resources.get_provider(requirement)
+    return provider.version
 
 
 def git_directories():
@@ -1004,7 +1009,7 @@ def main():
                         help="Print the license and exit")
     parser.add_argument("--version", action="version",
                         version='%s version %s' %
-                        (os.path.split(sys.argv[0])[-1], version))
+                        (os.path.split(sys.argv[0])[-1], get_version()))
     parser.add_argument("branch", nargs="?")
 
     try:
