@@ -386,7 +386,10 @@ def parse_git_show(remote, verb):
     if parsed_url.scheme == "ssh" and port is None:
         port = 22
 
-    return (hostname, username, str(port), project_name)
+    if port is not None:
+        port = str(port)
+
+    return (hostname, username, port, project_name)
 
 
 def check_color_support():
