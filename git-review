@@ -25,6 +25,7 @@ import re
 import shlex
 import subprocess
 import sys
+import textwrap
 import time
 
 if sys.version < '3':
@@ -98,6 +99,10 @@ class ChangeSetException(GitReviewException):
 
     def __str__(self):
         return self.__doc__ % self.e
+
+
+def printwrap(unwrapped):
+    print('\n'.join(textwrap.wrap(unwrapped)))
 
 
 def parse_review_number(review):
@@ -349,8 +354,9 @@ def add_remote(hostname, port, project, remote):
 
     if asked_for_username:
         print()
-        print("This repository is now set up for use with git-review.")
-        print("You can set the default username for future repositories with:")
+        printwrap("This repository is now set up for use with git-review. "
+                  "You can set the default username for future repositories "
+                  "with:")
         print('  git config --global --add gitreview.username "%s"' % username)
         print()
 
@@ -473,9 +479,9 @@ def check_remote(branch, remote, hostname, port, project):
 
     if hostname is False or port is False or project is False:
         # This means there was no .gitreview file
-        print("No '.gitreview' file found in this repository.")
-        print("We don't know where your gerrit is. Please manually create ")
-        print("a remote named \"%s\" and try again." % remote)
+        printwrap("No '.gitreview' file found in this repository. We don't "
+                  "know where your gerrit is. Please manually create a remote "
+                  "named \"%s\" and try again." % remote)
         sys.exit(1)
 
     # Gerrit remote not present, try to add it
@@ -483,8 +489,8 @@ def check_remote(branch, remote, hostname, port, project):
         add_remote(hostname, port, project, remote)
     except Exception:
         print(sys.exc_info()[2])
-        print("We don't know where your gerrit is. Please manually create ")
-        print("a remote named \"%s\" and try again." % remote)
+        printwrap("We don't know where your gerrit is. Please manually create "
+                  "a remote named \"%s\" and try again." % remote)
         raise
 
 
@@ -564,22 +570,22 @@ def assert_one_change(remote, branch, yes, have_hook):
         sys.exit(1)
     output_lines = len(output.split("\n"))
     if output_lines == 1 and not have_hook:
-        print("Your change was committed before the commit hook was installed")
-        print("Amending the commit to add a gerrit change id")
+        printwrap("Your change was committed before the commit hook was "
+                  "installed. Amending the commit to add a gerrit change id.")
         run_command("git commit --amend", GIT_EDITOR='true')
     elif output_lines == 0:
-        print("No changes between HEAD and %s/%s." % (remote, branch))
-        print("Submitting for review would be pointless.")
+        printwrap("No changes between HEAD and %s/%s. Submitting for review "
+                  "would be pointless." % (remote, branch))
         sys.exit(1)
     elif output_lines > 1:
         if not yes:
-            print("You are about to submit multiple commits. This is expected"
-                  " if you are submitting a commit that is dependant on one"
-                  " or more in-review commits. Otherwise you should consider"
-                  " squashing your changes into one commit before"
-                  " submitting.")
-            print("The outstanding commits are:\n\n%s\n" % output)
-            print("Do you really want to submit the above commits?")
+            printwrap("You are about to submit multiple commits. This is "
+                      "expected if you are submitting a commit that is "
+                      "dependent on one or more in-review commits. Otherwise "
+                      "you should consider squashing your changes into one "
+                      "commit before submitting.")
+            print("\nThe outstanding commits are:\n\n%s\n\n"
+                  "Do you really want to submit the above commits?" % output)
             yes_no = do_input("Type 'yes' to confirm, other to cancel: ")
             if yes_no.lower().strip() != "yes":
                 print("Aborting.")
