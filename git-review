@@ -26,7 +26,6 @@ import shlex
 import subprocess
 import sys
 import textwrap
-import time
 
 if sys.version < '3':
     import ConfigParser
@@ -42,8 +41,6 @@ else:
     urlopen = urllib.request.urlopen
     urlparse = urllib.parse.urlparse
     do_input = input
-
-from distutils import version as du_version
 
 version = "1.23"
 
@@ -146,48 +143,6 @@ def run_command_exc(klazz, *argv, **env):
     if rc != 0:
         raise klazz(rc, output, argv, env)
     return output
-
-
-def update_latest_version(version_file_path):
-    """Cache the latest version of git-review for the upgrade check."""
-
-    if not os.path.exists(CONFIGDIR):
-        os.makedirs(CONFIGDIR)
-
-    if os.path.exists(version_file_path) and not UPDATE:
-        if (time.time() - os.path.getmtime(version_file_path)) < 28800:
-            return
-
-    latest_version = version
-    try:
-        latest_version = json.load(urlopen(PYPI_URL))['info']['version']
-    except Exception:
-        pass
-
-    with open(version_file_path, "w") as version_file:
-        version_file.write(latest_version)
-
-
-def latest_is_newer():
-    """Check if there is a new version of git-review."""
-
-    # Skip version check if distro package turns it off
-    if os.path.exists(GLOBAL_CONFIG):
-        config = dict(check=False)
-        configParser = ConfigParser.ConfigParser(config)
-        configParser.read(GLOBAL_CONFIG)
-        if not configParser.getboolean("updates", "check"):
-            return False
-
-    version_file_path = os.path.join(CONFIGDIR, "latest-version")
-    update_latest_version(version_file_path)
-
-    latest_version = None
-    with open(version_file_path, "r") as version_file:
-        latest_version = du_version.StrictVersion(version_file.read())
-    if latest_version > du_version.StrictVersion(version):
-        return True
-    return False
 
 
 def git_directories():
@@ -953,22 +908,6 @@ def convert_bool(one_or_zero):
     return one_or_zero in ["1", "true", "True"]
 
 
-def print_exit_message(status, needs_update):
-
-    if needs_update:
-        print("""
-***********************************************************
-A new version of git-review is available on PyPI. Please
-update your copy with:
-
-  pip install -U git-review
-
-to ensure proper behavior with gerrit. Thanks!
-***********************************************************
-""")
-    sys.exit(status)
-
-
 def main():
     usage = "git review [OPTIONS] ... [BRANCH]"
 
@@ -1105,7 +1044,6 @@ def main():
     yes = options.yes
     status = 0
 
-    needs_update = latest_is_newer()
     check_remote(branch, remote,
                  config['hostname'], config['port'], config['project'])
 
@@ -1145,9 +1083,9 @@ def main():
 
     if options.rebase:
         if not rebase_changes(branch, remote):
-            print_exit_message(1, needs_update)
+            sys.exit(1)
         if not options.force_rebase and not undo_rebase():
-            print_exit_message(1, needs_update)
+            sys.exit(1)
     assert_one_change(remote, branch, yes, have_hook)
 
     ref = "publish"
@@ -1188,7 +1126,7 @@ def main():
 
     if options.custom_script:
         run_custom_script("post")
-    print_exit_message(status, needs_update)
+    sys.exit(status)
 
 
 if __name__ == "__main__":
