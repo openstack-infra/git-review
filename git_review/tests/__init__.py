@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-import random
 import shutil
 import stat
 import sys
@@ -110,13 +109,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         super(BaseGitReviewTestCase, self).setUp()
 
         self.init_dirs()
-        for i in range(11):
-            if i == 10:
-                raise Exception("Failed to select free port for Gerrit")
-            self.gerrit_port = random.randint(20000, 21000)
-            self.site_dir = self._dir('gerrit', 'site-%04x' % self.gerrit_port)
-            if not os.path.exists(self.site_dir):
-                break
+        self._pick_gerrit_port_and_dir()
 
         self.test_dir = self._dir('site', 'tmp', 'test_project')
         self.ssh_dir = self._dir('site', 'tmp', 'ssh')
@@ -204,3 +197,13 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
         os.environ['PATH'] = self.ssh_dir + os.pathsep + os.environ['PATH']
         os.environ['GIT_SSH'] = self._dir('ssh', 'ssh')
+
+    def _pick_gerrit_port_and_dir(self):
+        pid = os.getpid()
+        for i in range(11):
+            if i == 10:
+                raise Exception("Failed to select free port for Gerrit")
+            self.gerrit_port = 20000 + i * 1000 + pid % 1000
+            self.site_dir = self._dir('gerrit', 'site-%04x' % self.gerrit_port)
+            if not os.path.exists(self.site_dir):
+                break
