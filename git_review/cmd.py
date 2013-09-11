@@ -284,9 +284,9 @@ def add_remote(hostname, port, project, remote):
     """Adds a gerrit remote."""
     asked_for_username = False
 
-    username = os.getenv("USERNAME")
+    username = git_config_get_value("gitreview", "username")
     if not username:
-        username = git_config_get_value("gitreview", "username")
+        username = os.getenv("USERNAME")
     if not username:
         username = os.getenv("USER")
     if port is None:
