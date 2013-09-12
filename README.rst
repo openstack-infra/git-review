@@ -153,7 +153,7 @@ depending on what Python interpreter would you like to use.
 Contributing
 ------------
 
-To get the latest code, see: https://github.com/openstack-infra/git-review
+To get the latest code, see: https://git.openstack.org/cgit/openstack-infra/git-review
 
 Bugs are handled at: https://launchpad.net/git-review
 
