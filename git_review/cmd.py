@@ -528,7 +528,8 @@ def assert_one_change(remote, branch, yes, have_hook):
         print("Had trouble running %s" % cmd)
         print(output)
         sys.exit(1)
-    output_lines = len(output.split("\n"))
+    filtered = filter(None, output.split("\n"))
+    output_lines = sum(1 for s in filtered)
     if output_lines == 1 and not have_hook:
         printwrap("Your change was committed before the commit hook was "
                   "installed. Amending the commit to add a gerrit change id.")
