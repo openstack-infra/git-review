@@ -155,7 +155,7 @@ def git_directories():
     cmd = ("git", "rev-parse", "--show-toplevel", "--git-dir")
     out = run_command_exc(GitDirectoriesException, *cmd)
     try:
-        return out.split()
+        return out.splitlines()
     except ValueError:
         raise GitDirectoriesException(0, out, cmd, {})
 
