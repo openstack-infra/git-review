@@ -56,6 +56,7 @@ DEFAULTS = dict(hostname=False, port='29418', project=False,
 
 _branch_name = None
 _has_color = None
+_orig_head = None
 
 
 class colors:
@@ -456,15 +457,28 @@ def check_remote(branch, remote, hostname, port, project):
 
 def rebase_changes(branch, remote, interactive=True):
 
+    global _orig_head
+
     remote_branch = "remotes/%s/%s" % (remote, branch)
 
     if not update_remote(remote):
         return False
 
+    # since the value of ORIG_HEAD may not be set by rebase as expected
+    # for use in undo_rebase, make sure to save it explicitly
+    cmd = "git rev-parse HEAD"
+    (status, output) = run_command_status(cmd)
+    if status != 0:
+        print("Errors running %s" % cmd)
+        if interactive:
+            print(output)
+        return False
+    _orig_head = output
+
     if interactive:
-        cmd = "git rebase -i %s" % remote_branch
+        cmd = "git rebase -p -i %s" % remote_branch
     else:
-        cmd = "git rebase %s" % remote_branch
+        cmd = "git rebase -p %s" % remote_branch
 
     (status, output) = run_command_status(cmd, GIT_EDITOR='true')
     if status != 0:
@@ -476,7 +490,11 @@ def rebase_changes(branch, remote, interactive=True):
 
 
 def undo_rebase():
-    cmd = "git reset --hard ORIG_HEAD"
+    global _orig_head
+    if not _orig_head:
+        return True
+
+    cmd = "git reset --hard %s" % _orig_head
     (status, output) = run_command_status(cmd)
     if status != 0:
         print("Errors running %s" % cmd)

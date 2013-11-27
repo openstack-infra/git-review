@@ -100,7 +100,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                             'create conflict with master')
 
         exc = self.assertRaises(Exception, self._run_git_review)
-        self.assertIn("Errors running git rebase -i remotes/gerrit/master",
+        self.assertIn("Errors running git rebase -p -i remotes/gerrit/master",
                       exc.args[0])
 
     def test_upload_without_rebase(self):
@@ -115,7 +115,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                             self._dir('test', 'new_test_file.txt'))
 
         review_res = self._run_git_review('-v')
-        self.assertIn("Running: git rebase -i remotes/gerrit/master",
+        self.assertIn("Running: git rebase -p -i remotes/gerrit/master",
                       review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head_1)
 
