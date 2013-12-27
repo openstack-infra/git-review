@@ -224,7 +224,7 @@ def set_hooks_commit_msg(remote, target_file):
         os.mkdir(hooks_dir)
 
     (hostname, username, port, project_name) = \
-        parse_git_show(remote, "Push")
+        get_ssh_remote_url(remote)
 
     if not os.path.exists(target_file) or UPDATE:
         if VERBOSE:
@@ -322,13 +322,11 @@ def add_remote(hostname, port, project, remote):
         print()
 
 
-def parse_git_show(remote, verb):
-    fetch_url = ""
-    for line in run_command("git remote show -n %s" % remote).split("\n"):
-        if line.strip().startswith("%s" % verb):
-            fetch_url = line.split()[2]
+def get_ssh_remote_url(remote):
+    url = git_config_get_value('remote.%s' % remote, 'url', '')
+    push_url = git_config_get_value('remote.%s' % remote, 'pushurl', url)
 
-    parsed_url = urlparse(fetch_url)
+    parsed_url = urlparse(push_url)
     project_name = parsed_url.path.lstrip("/")
     if project_name.endswith(".git"):
         project_name = project_name[:-4]
@@ -338,7 +336,7 @@ def parse_git_show(remote, verb):
     port = parsed_url.port
 
     if VERBOSE:
-        print("Found origin %s URL:" % verb, fetch_url)
+        print("Found origin Push URL:", push_url)
 
     # Workaround bug in urlparse on OSX
     if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
@@ -622,7 +620,7 @@ class CannotParseOpenChangesets(ChangeSetException):
 def list_reviews(remote):
 
     (hostname, username, port, project_name) = \
-        parse_git_show(remote, "Push")
+        get_ssh_remote_url(remote)
 
     if port is not None:
         port = "-p %s" % port
@@ -747,7 +745,7 @@ class ResetHardFailed(CommandFailed):
 def fetch_review(review, masterbranch, remote):
 
     (hostname, username, port, project_name) = \
-        parse_git_show(remote, "Push")
+        get_ssh_remote_url(remote)
 
     if port is not None:
         port = "-p %s" % port
