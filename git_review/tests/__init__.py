@@ -26,6 +26,7 @@ else:
     urlopen = urllib.request.urlopen
 
 import testtools
+from testtools import content
 
 from git_review.tests import utils
 
@@ -161,6 +162,13 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
             new_conf = utils.get_gerrit_conf(self.gerrit_port,
                                              self.gerrit_port + 10)
             _conf.write(new_conf)
+
+        # If test fails, attach Gerrit logs to the result
+        @self.addOnException
+        def add_logs(exc_info):
+            for name in ['error_log', 'sshd_log', 'httpd_log']:
+                content.attach_file(self, self._dir('site', 'logs', name))
+
         # start Gerrit
         gerrit_sh = self._dir('site', 'bin', 'gerrit.sh')
         utils.run_cmd(gerrit_sh, 'start')
@@ -184,6 +192,11 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
                                 'localhost')
         utils.write_to_file(self._dir('ssh', 'known_hosts'), ssh_key.encode())
         self.addCleanup(os.remove, self._dir('ssh', 'known_hosts'))
+
+        # Attach known_hosts to test results if anything fails
+        @self.addOnException
+        def add_known_hosts(exc_info):
+            content.attach_file(self, self._dir('ssh', 'known_hosts'))
 
         for cmd in ('ssh', 'scp'):
             cmd_file = self._dir('ssh', cmd)
