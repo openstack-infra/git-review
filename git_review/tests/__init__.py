@@ -159,7 +159,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         # write config
         with open(self._dir('site', 'etc', 'gerrit.config'), 'w') as _conf:
             new_conf = utils.get_gerrit_conf(self.gerrit_port,
-                                             self.gerrit_port + 1000)
+                                             self.gerrit_port + 10)
             _conf.write(new_conf)
         # start Gerrit
         gerrit_sh = self._dir('site', 'bin', 'gerrit.sh')
