@@ -28,18 +28,20 @@ import subprocess
 import sys
 import textwrap
 
+import requests
+
 if sys.version < '3':
     import ConfigParser
     import urllib
     import urlparse
-    urlopen = urllib.urlopen
+    urljoin = urlparse.urljoin
     urlparse = urlparse.urlparse
     do_input = raw_input
 else:
     import configparser as ConfigParser
     import urllib.parse
     import urllib.request
-    urlopen = urllib.request.urlopen
+    urljoin = urllib.parse.urljoin
     urlparse = urllib.parse.urlparse
     do_input = input
 
@@ -223,25 +225,36 @@ def set_hooks_commit_msg(remote, target_file):
     if not os.path.isdir(hooks_dir):
         os.mkdir(hooks_dir)
 
-    (hostname, username, port, project_name) = \
-        get_ssh_remote_url(remote)
-
     if not os.path.exists(target_file) or UPDATE:
-        if VERBOSE:
-            print("Fetching commit hook from: scp://%s:%s" % (hostname, port))
-        if port is not None:
-            port = "-P %s" % port
+        remote_url = get_remote_url(remote)
+        if (remote_url.startswith('http://') or
+                remote_url.startswith('https://')):
+            hook_url = urljoin(remote_url, '/tools/hooks/commit-msg')
+            if VERBOSE:
+                print("Fetching commit hook from: %s" % hook_url)
+            res = requests.get(hook_url, stream=True)
+            if res.status_code == 200:
+                with open(target_file, 'wb') as f:
+                    for x in res.iter_content(1024):
+                        f.write(x)
+            else:
+                raise CannotInstallHook
         else:
-            port = ""
-        if username is None:
-            userhost = hostname
-        else:
-            userhost = "%s@%s" % (username, hostname)
-        run_command_exc(
-            CannotInstallHook,
-            "scp", port,
-            userhost + ":hooks/commit-msg",
-            target_file)
+            (hostname, username, port, project_name) = \
+                parse_ssh_remote_url(remote_url)
+            if port is not None:
+                port = "-P %s" % port
+            else:
+                port = ""
+            if username is None:
+                userhost = hostname
+            else:
+                userhost = "%s@%s" % (username, hostname)
+            cmd = "scp", port, userhost + ":hooks/commit-msg", target_file
+            if VERBOSE:
+                hook_url = 'scp://%s:%s/hooks/commit-msg' % (userhost, port)
+                print("Fetching commit hook from: %s" % hook_url)
+            run_command_exc(CannotInstallHook, *cmd)
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
@@ -322,11 +335,16 @@ def add_remote(hostname, port, project, remote):
         print()
 
 
-def get_ssh_remote_url(remote):
+def get_remote_url(remote):
     url = git_config_get_value('remote.%s' % remote, 'url', '')
     push_url = git_config_get_value('remote.%s' % remote, 'pushurl', url)
+    if VERBOSE:
+        print("Found origin Push URL:", push_url)
+    return push_url
 
-    parsed_url = urlparse(push_url)
+
+def parse_ssh_remote_url(remote_url):
+    parsed_url = urlparse(remote_url)
     project_name = parsed_url.path.lstrip("/")
     if project_name.endswith(".git"):
         project_name = project_name[:-4]
@@ -334,9 +352,6 @@ def get_ssh_remote_url(remote):
     hostname = parsed_url.netloc
     username = None
     port = parsed_url.port
-
-    if VERBOSE:
-        print("Found origin Push URL:", push_url)
 
     # Workaround bug in urlparse on OSX
     if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
@@ -618,9 +633,9 @@ class CannotParseOpenChangesets(ChangeSetException):
 
 
 def list_reviews(remote):
-
+    remote_url = get_remote_url(remote)
     (hostname, username, port, project_name) = \
-        get_ssh_remote_url(remote)
+        parse_ssh_remote_url(remote_url)
 
     if port is not None:
         port = "-p %s" % port
@@ -743,9 +758,9 @@ class ResetHardFailed(CommandFailed):
 
 
 def fetch_review(review, masterbranch, remote):
-
+    remote_url = get_remote_url(remote)
     (hostname, username, port, project_name) = \
-        get_ssh_remote_url(remote)
+        parse_ssh_remote_url(remote_url)
 
     if port is not None:
         port = "-p %s" % port

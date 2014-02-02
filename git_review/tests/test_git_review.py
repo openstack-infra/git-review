@@ -144,3 +144,11 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         review_res = self._run_git_review('-v', '-F')
         self.assertIn('rebase', review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head)
+
+
+class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
+    """Class for the git-review tests over HTTP(S)."""
+
+    def test_git_review_d(self):
+        self.skipTest("git review -d uses fetch_review "
+                      "which does not support http remote")

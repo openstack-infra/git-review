@@ -78,8 +78,8 @@ class GerritHelpers(object):
         sql_query = """INSERT INTO ACCOUNTS (REGISTERED_ON) VALUES (NOW());
         INSERT INTO ACCOUNT_GROUP_MEMBERS (ACCOUNT_ID, GROUP_ID) \
             VALUES (0, 1);
-        INSERT INTO ACCOUNT_EXTERNAL_IDS (ACCOUNT_ID, EXTERNAL_ID) \
-            VALUES (0, 'username:test_user');
+        INSERT INTO ACCOUNT_EXTERNAL_IDS (ACCOUNT_ID, EXTERNAL_ID, PASSWORD) \
+            VALUES (0, 'username:test_user', 'test_pass');
         INSERT INTO ACCOUNT_SSH_KEYS (SSH_PUBLIC_KEY, VALID) \
             VALUES ('%s', 'Y')""" % pub_key.decode()
 
@@ -105,6 +105,10 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
     _test_counter = 0
 
+    @property
+    def project_uri(self):
+        return self.project_ssh_uri
+
     def setUp(self):
         """Configure testing environment.
 
@@ -122,8 +126,12 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
         self.test_dir = self._dir('site', 'tmp', 'test_project')
         self.ssh_dir = self._dir('site', 'tmp', 'ssh')
-        self.project_uri = 'ssh://test_user@%s:%s/test/test_project.git' % (
-            ssh_addr, ssh_port)
+        self.project_ssh_uri = (
+            'ssh://test_user@%s:%s/test/test_project.git' % (
+            ssh_addr, ssh_port))
+        self.project_http_uri = (
+            'http://test_user:test_pass@%s:%s/test/test_project.git' % (
+            http_addr, http_port))
 
         self._run_gerrit(ssh_addr, ssh_port, http_addr, http_port)
         self._configure_ssh(ssh_addr, ssh_port)
@@ -227,3 +235,11 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         pid = os.getpid()
         host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
         return host, 29418, host, 8080, self._dir('gerrit', 'site-' + host)
+
+
+class HttpMixin(object):
+    """HTTP remote_url mixin."""
+
+    @property
+    def project_uri(self):
+        return self.project_http_uri
