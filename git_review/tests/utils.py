@@ -67,11 +67,11 @@ GERRIT_CONF_TMPL = """
 [auth]
     type = DEVELOPMENT_BECOME_ANY_ACCOUNT
 [sshd]
-    listenAddress = *:%s
+    listenAddress = %s:%s
 [httpd]
-    listenUrl = http://*:%s/
+    listenUrl = http://%s:%s/
 """
 
 
-def get_gerrit_conf(port, http_port):
-    return GERRIT_CONF_TMPL % (port, http_port)
+def get_gerrit_conf(ssh_addr, ssh_port, http_addr, http_port):
+    return GERRIT_CONF_TMPL % (ssh_addr, ssh_port, http_addr, http_port)

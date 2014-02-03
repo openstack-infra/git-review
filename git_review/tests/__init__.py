@@ -90,7 +90,8 @@ class GerritHelpers(object):
     def _run_gerrit_cli(self, command, *args):
         """SSH to gerrit Gerrit server and run command there."""
         return utils.run_cmd('ssh', '-p', str(self.gerrit_port),
-                             'test_user@localhost', 'gerrit', command, *args)
+                             'test_user@' + self.gerrit_host, 'gerrit',
+                             command, *args)
 
     def _run_git_review(self, *args, **kwargs):
         """Run git-review utility from source."""
@@ -102,6 +103,8 @@ class GerritHelpers(object):
 class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
     """Base class for the git-review tests."""
 
+    _test_counter = 0
+
     def setUp(self):
         """Configure testing environment.
 
@@ -110,17 +113,20 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         """
         super(BaseGitReviewTestCase, self).setUp()
         self.useFixture(fixtures.Timeout(2 * 60, True))
+        BaseGitReviewTestCase._test_counter += 1
 
         self.init_dirs()
-        self._pick_gerrit_port_and_dir()
+        ssh_addr, ssh_port, http_addr, http_port, self.site_dir = \
+            self._pick_gerrit_port_and_dir()
+        self.gerrit_host, self.gerrit_port = ssh_addr, ssh_port
 
         self.test_dir = self._dir('site', 'tmp', 'test_project')
         self.ssh_dir = self._dir('site', 'tmp', 'ssh')
-        self.project_uri = 'ssh://test_user@localhost:%s/' \
-            'test/test_project.git' % self.gerrit_port
+        self.project_uri = 'ssh://test_user@%s:%s/test/test_project.git' % (
+            ssh_addr, ssh_port)
 
-        self._run_gerrit()
-        self._configure_ssh()
+        self._run_gerrit(ssh_addr, ssh_port, http_addr, http_port)
+        self._configure_ssh(ssh_addr, ssh_port)
 
         # create Gerrit empty project
         self._run_gerrit_cli('create-project', '--empty-commit',
@@ -131,9 +137,9 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         utils.write_to_file(self._dir('test', 'test_file.txt'),
                             'test file created'.encode())
         cfg = ('[gerrit]\n'
-               'host=localhost\n'
+               'host=%s\n'
                'port=%s\n'
-               'project=test/test_project.git' % self.gerrit_port)
+               'project=test/test_project.git' % (ssh_addr, ssh_port))
         utils.write_to_file(self._dir('test', '.gitreview'), cfg.encode())
 
         # push changes to the Gerrit
@@ -155,14 +161,14 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
                              '--work-tree=' + self._dir('test'),
                              command, *args)
 
-    def _run_gerrit(self):
+    def _run_gerrit(self, ssh_addr, ssh_port, http_addr, http_port):
         # create a copy of site dir
         shutil.copytree(self.gsite_dir, self.site_dir)
         self.addCleanup(shutil.rmtree, self.site_dir)
         # write config
         with open(self._dir('site', 'etc', 'gerrit.config'), 'w') as _conf:
-            new_conf = utils.get_gerrit_conf(self.gerrit_port,
-                                             self.gerrit_port + 10)
+            new_conf = utils.get_gerrit_conf(
+                ssh_addr, ssh_port, http_addr, http_port)
             _conf.write(new_conf)
 
         # If test fails, attach Gerrit logs to the result
@@ -185,13 +191,12 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('add', file_)
         self._run_git('commit', '-m', commit_message)
 
-    def _configure_ssh(self):
+    def _configure_ssh(self, ssh_addr, ssh_port):
         """Setup ssh and scp to run with special options."""
 
         os.mkdir(self.ssh_dir)
 
-        ssh_key = utils.run_cmd('ssh-keyscan', '-p', str(self.gerrit_port),
-                                'localhost')
+        ssh_key = utils.run_cmd('ssh-keyscan', '-p', str(ssh_port), ssh_addr)
         utils.write_to_file(self._dir('ssh', 'known_hosts'), ssh_key.encode())
         self.addCleanup(os.remove, self._dir('ssh', 'known_hosts'))
 
@@ -220,10 +225,5 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
     def _pick_gerrit_port_and_dir(self):
         pid = os.getpid()
-        for i in range(11):
-            if i == 10:
-                raise Exception("Failed to select free port for Gerrit")
-            self.gerrit_port = 20000 + i * 1000 + pid % 1000
-            self.site_dir = self._dir('gerrit', 'site-%04x' % self.gerrit_port)
-            if not os.path.exists(self.site_dir):
-                break
+        host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
+        return host, 29418, host, 8080, self._dir('gerrit', 'site-' + host)
