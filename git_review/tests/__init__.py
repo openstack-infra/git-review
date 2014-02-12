@@ -196,7 +196,12 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         # Attach known_hosts to test results if anything fails
         @self.addOnException
         def add_known_hosts(exc_info):
-            content.attach_file(self, self._dir('ssh', 'known_hosts'))
+            known_hosts = self._dir('ssh', 'known_hosts')
+            if os.path.exists(known_hosts):
+                content.attach_file(self, known_hosts)
+            else:
+                self.addDetail('known_hosts',
+                               content.text_content('Not found'))
 
         for cmd in ('ssh', 'scp'):
             cmd_file = self._dir('ssh', cmd)
