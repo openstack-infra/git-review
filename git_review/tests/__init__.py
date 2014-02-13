@@ -25,6 +25,7 @@ else:
     import urllib.request
     urlopen = urllib.request.urlopen
 
+import fixtures
 import testtools
 from testtools import content
 
@@ -108,6 +109,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         Require Gerrit war file in the .gerrit directory to run Gerrit local.
         """
         super(BaseGitReviewTestCase, self).setUp()
+        self.useFixture(fixtures.Timeout(2 * 60, True))
 
         self.init_dirs()
         self._pick_gerrit_port_and_dir()
