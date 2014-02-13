@@ -153,6 +153,15 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('remote', 'add', 'gerrit', self.project_uri)
         self.addCleanup(shutil.rmtree, self.test_dir)
 
+    def attach_on_exception(self, filename):
+        @self.addOnException
+        def attach_file(exc_info):
+            if os.path.exists(filename):
+                content.attach_file(self, filename)
+            else:
+                self.addDetail(os.path.basename(filename),
+                               content.text_content('Not found'))
+
     def _run_git(self, command, *args):
         """Run git command using test git directory."""
         if command == 'clone':
@@ -171,11 +180,10 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
                 ssh_addr, ssh_port, http_addr, http_port)
             _conf.write(new_conf)
 
-        # If test fails, attach Gerrit logs to the result
-        @self.addOnException
-        def add_logs(exc_info):
-            for name in ['error_log', 'sshd_log', 'httpd_log']:
-                content.attach_file(self, self._dir('site', 'logs', name))
+        # If test fails, attach Gerrit config and logs to the result
+        self.attach_on_exception(self._dir('site', 'etc', 'gerrit.config'))
+        for name in ['error_log', 'sshd_log', 'httpd_log']:
+            self.attach_on_exception(self._dir('site', 'logs', name))
 
         # start Gerrit
         gerrit_sh = self._dir('site', 'bin', 'gerrit.sh')
@@ -201,14 +209,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self.addCleanup(os.remove, self._dir('ssh', 'known_hosts'))
 
         # Attach known_hosts to test results if anything fails
-        @self.addOnException
-        def add_known_hosts(exc_info):
-            known_hosts = self._dir('ssh', 'known_hosts')
-            if os.path.exists(known_hosts):
-                content.attach_file(self, known_hosts)
-            else:
-                self.addDetail('known_hosts',
-                               content.text_content('Not found'))
+        self.attach_on_exception(self._dir('ssh', 'known_hosts'))
 
         for cmd in ('ssh', 'scp'):
             cmd_file = self._dir('ssh', cmd)
