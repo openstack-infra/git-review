@@ -587,7 +587,7 @@ def get_topic(target_branch):
                          "/".join(branch_parts[2:]))
 
     log_output = run_command("git log HEAD^1..HEAD")
-    bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)'
+    bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[:]?\s*[#]?\s*(\d+)'
 
     match = re.search(bug_re, log_output)
     if match is not None:
