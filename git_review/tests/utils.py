@@ -15,6 +15,7 @@
 
 import os
 import subprocess
+import traceback
 
 
 def run_cmd(*args, **kwargs):
@@ -25,17 +26,23 @@ def run_cmd(*args, **kwargs):
         def preexec_fn():
             return os.chdir(kwargs['chdir'])
 
-    proc = subprocess.Popen(args, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, env=os.environ,
-                            preexec_fn=preexec_fn)
+    try:
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, env=os.environ,
+                                preexec_fn=preexec_fn)
 
-    if 'confirm' in kwargs and kwargs['confirm']:
-        proc.stdin.write('yes'.encode())
-        proc.stdin.flush()
+        if 'confirm' in kwargs and kwargs['confirm']:
+            proc.stdin.write('yes'.encode())
+            proc.stdin.flush()
 
-    out, err = proc.communicate()
-    out = out.decode('utf-8')
+        out, err = proc.communicate()
+        out = out.decode('utf-8')
+    except Exception:
+        raise Exception(
+            "Exception while processing the command:\n%s.\n%s" %
+            (' '.join(args), traceback.format_exc())
+        )
 
     if proc.returncode != 0:
         raise Exception(
