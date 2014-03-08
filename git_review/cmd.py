@@ -247,29 +247,16 @@ def set_hooks_commit_msg(remote, target_file):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
 
 
-def test_remote(username, hostname, port, project):
-    """Tests that a possible gerrit remote works."""
-
-    if port is not None:
-        port = "-p %s" % port
-    else:
-        port = ""
-    if username is None:
-        userhost = hostname
-    else:
-        userhost = "%s@%s" % (username, hostname)
-
-    (status, ssh_output) = run_command_status(
-        "ssh", "-x", port, userhost,
-        "gerrit", "ls-projects")
-
+def test_remote_url(remote_url):
+    """Tests that a possible gerrit remote url works."""
+    status, __ = run_command_status("git", "push", "--dry-run", remote_url)
     if status == 0:
         if VERBOSE:
-            print("%s@%s:%s worked." % (username, hostname, port))
+            print("%s worked." % remote_url)
         return True
     else:
         if VERBOSE:
-            print("%s@%s:%s did not work." % (username, hostname, port))
+            print("%s did not work." % remote_url)
         return False
 
 
@@ -296,12 +283,12 @@ def add_remote(hostname, port, project, remote):
     remote_url = make_remote_url(username, hostname, port, project)
     if VERBOSE:
         print("No remote set, testing %s" % remote_url)
-    if not test_remote(username, hostname, port, project):
+    if not test_remote_url(remote_url):
         print("Could not connect to gerrit.")
         username = do_input("Enter your gerrit username: ")
         remote_url = make_remote_url(username, hostname, port, project)
         print("Trying again with %s" % remote_url)
-        if not test_remote(username, hostname, port, project):
+        if not test_remote_url(remote_url):
             raise Exception("Could not connect to gerrit at %s" % remote_url)
         asked_for_username = True
 
