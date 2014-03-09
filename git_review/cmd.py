@@ -262,20 +262,19 @@ def set_hooks_commit_msg(remote, target_file):
         else:
             (hostname, username, port, project_name) = \
                 parse_gerrit_ssh_params_from_git_url(remote_url)
-            scp_args = ["scp"]
-            if port is not None:
-                scp_args += ["-P", "%s" % port]
             if username is None:
                 userhost = hostname
             else:
                 userhost = "%s@%s" % (username, hostname)
-            scp_args += [userhost + ":hooks/commit-msg"]
-            scp_args += [target_file]
+            cmd = ["scp", userhost + ":hooks/commit-msg", target_file]
+            if port is not None:
+                cmd.insert(1, "-P%s" % port)
+
             if VERBOSE:
                 hook_url = 'scp://%s%s/hooks/commit-msg' \
                     % (userhost, (":%s" % port) if port else "")
                 print("Fetching commit hook from: %s" % hook_url)
-            run_command_exc(CannotInstallHook, *scp_args)
+            run_command_exc(CannotInstallHook, *cmd)
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
@@ -458,7 +457,7 @@ def query_reviews_over_ssh(remote_url, change=None, current_patch_set=True,
     else:
         query = "project:%s status:open" % project_name
 
-    port = "-p%s" % port if port is not None else ""
+    port_data = "p%s" % port if port is not None else ""
     if username is None:
         userhost = hostname
     else:
@@ -468,7 +467,7 @@ def query_reviews_over_ssh(remote_url, change=None, current_patch_set=True,
         print("Query gerrit %s %s" % (remote_url, query))
     output = run_command_exc(
         exception,
-        "ssh", "-x", port, userhost,
+        "ssh", "-x" + port_data, userhost,
         "gerrit", "query",
         "--format=JSON %s" % query)
     if VERBOSE:
