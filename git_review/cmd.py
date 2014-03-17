@@ -241,20 +241,21 @@ def set_hooks_commit_msg(remote, target_file):
                 raise CannotInstallHook
         else:
             (hostname, username, port, project_name) = \
-                parse_ssh_remote_url(remote_url)
+                parse_gerrit_ssh_params_from_git_url(remote_url)
+            scp_args = ["scp"]
             if port is not None:
-                port = "-P %s" % port
-            else:
-                port = ""
+                scp_args += ["-P", "%s" % port]
             if username is None:
                 userhost = hostname
             else:
                 userhost = "%s@%s" % (username, hostname)
-            cmd = "scp", port, userhost + ":hooks/commit-msg", target_file
+            scp_args += [userhost + ":hooks/commit-msg"]
+            scp_args += [target_file]
             if VERBOSE:
-                hook_url = 'scp://%s:%s/hooks/commit-msg' % (userhost, port)
+                hook_url = 'scp://%s%s/hooks/commit-msg' \
+                    % (userhost, (":%s" % port) if port else "")
                 print("Fetching commit hook from: %s" % hook_url)
-            run_command_exc(CannotInstallHook, *cmd)
+            run_command_exc(CannotInstallHook, *scp_args)
 
     if not os.access(target_file, os.X_OK):
         os.chmod(target_file, os.path.stat.S_IREAD | os.path.stat.S_IEXEC)
@@ -330,31 +331,47 @@ def get_remote_url(remote):
     return push_url
 
 
-def parse_ssh_remote_url(remote_url):
-    parsed_url = urlparse(remote_url)
-    project_name = parsed_url.path.lstrip("/")
-    if project_name.endswith(".git"):
-        project_name = project_name[:-4]
+def parse_gerrit_ssh_params_from_git_url(git_url):
+    """Parse a given Git "URL" into Gerrit parameters. Git "URLs" are either
+    real URLs or SCP-style addresses.
+    """
 
-    hostname = parsed_url.netloc
-    username = None
-    port = parsed_url.port
+    # The exact code for this in Git itself is a bit obtuse, so just do
+    # something sensible and pythonic here instead of copying the exact
+    # minutiae from Git.
 
-    # Workaround bug in urlparse on OSX
-    if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
-        hostname = parsed_url.path[2:].split("/")[0]
+    # Handle real(ish) URLs
+    if "://" in git_url:
+        parsed_url = urlparse(git_url)
+        path = parsed_url.path
 
-    if "@" in hostname:
-        (username, hostname) = hostname.split("@")
-    if ":" in hostname:
-        (hostname, port) = hostname.split(":")
+        hostname = parsed_url.netloc
+        username = None
+        port = parsed_url.port
 
-    # Is origin an ssh location? Let's pull more info
-    if parsed_url.scheme == "ssh" and port is None:
-        port = 22
+        # Workaround bug in urlparse on OSX
+        if parsed_url.scheme == "ssh" and parsed_url.path[:2] == "//":
+            hostname = parsed_url.path[2:].split("/")[0]
 
-    if port is not None:
-        port = str(port)
+        if "@" in hostname:
+            (username, hostname) = hostname.split("@")
+        if ":" in hostname:
+            (hostname, port) = hostname.split(":")
+
+        if port is not None:
+            port = str(port)
+
+    # Handle SCP-style addresses
+    else:
+        username = None
+        port = None
+        (hostname, path) = git_url.split(":", 1)
+        if "@" in hostname:
+            (username, hostname) = hostname.split("@", 1)
+
+    # Strip leading slash and trailing .git from the path to form the project
+    # name.
+    project_name = re.sub(r"^/|(\.git$)", "", path)
 
     return (hostname, username, port, project_name)
 
@@ -622,7 +639,7 @@ class CannotParseOpenChangesets(ChangeSetException):
 def list_reviews(remote):
     remote_url = get_remote_url(remote)
     (hostname, username, port, project_name) = \
-        parse_ssh_remote_url(remote_url)
+        parse_gerrit_ssh_params_from_git_url(remote_url)
 
     if port is not None:
         port = "-p %s" % port
@@ -747,7 +764,7 @@ class ResetHardFailed(CommandFailed):
 def fetch_review(review, masterbranch, remote):
     remote_url = get_remote_url(remote)
     (hostname, username, port, project_name) = \
-        parse_ssh_remote_url(remote_url)
+        parse_gerrit_ssh_params_from_git_url(remote_url)
 
     if port is not None:
         port = "-p %s" % port
