@@ -127,7 +127,7 @@ def run_command_status(*argv, **env):
     p = subprocess.Popen(argv, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, env=newenv)
     (out, nothing) = p.communicate()
-    out = out.decode('utf-8')
+    out = out.decode('utf-8', 'replace')
     return (p.returncode, out.strip())
 
 
