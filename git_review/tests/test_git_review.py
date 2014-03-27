@@ -34,6 +34,29 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self._simple_change('test file modified', 'test commit message')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
 
+    def test_git_review_s_in_detached_head(self):
+        """Test git-review -s in detached HEAD state."""
+        self._run_git('remote', 'rm', 'gerrit')
+        self._run_git('config', '--add', 'gitreview.username', 'test_user')
+        master_sha1 = self._run_git('rev-parse', 'master')
+        self._run_git('checkout', master_sha1)
+        self._run_git_review('-s')
+        self._simple_change('test file modified', 'test commit message')
+        self.assertIn('Change-Id:', self._run_git('log', '-1'))
+
+    def test_git_review_s_with_outdated_repo(self):
+        """Test git-review -s with a outdated repo."""
+        self._simple_change('test file to outdate', 'test commit message 1')
+        self._run_git('push', 'origin', 'master')
+        self._run_git('reset', '--hard', 'HEAD^')
+
+        # Review setup with an outdated repo
+        self._run_git('remote', 'rm', 'gerrit')
+        self._run_git('config', '--add', 'gitreview.username', 'test_user')
+        self._run_git_review('-s')
+        self._simple_change('test file modified', 'test commit message 2')
+        self.assertIn('Change-Id:', self._run_git('log', '-1'))
+
     def test_git_review_d(self):
         """Test git-review -d."""
         self._run_git_review('-s')

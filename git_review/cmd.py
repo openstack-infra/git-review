@@ -282,8 +282,9 @@ def set_hooks_commit_msg(remote, target_file):
 
 def test_remote_url(remote_url):
     """Tests that a possible gerrit remote url works."""
-    status, __ = run_command_status("git", "push", "--dry-run", remote_url)
-    if status == 0:
+    status, __ = run_command_status("git", "push", "--dry-run", remote_url,
+                                    "--all")
+    if status != 128:
         if VERBOSE:
             print("%s worked." % remote_url)
         return True
