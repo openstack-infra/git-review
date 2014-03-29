@@ -148,7 +148,3 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""
-
-    def test_git_review_d(self):
-        self.skipTest("git review -d uses fetch_review "
-                      "which does not support http remote")

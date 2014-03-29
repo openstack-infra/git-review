@@ -137,14 +137,36 @@ def run_command(*argv, **env):
 
 
 def run_command_exc(klazz, *argv, **env):
-    """Run command *argv, on failure raise 'klazz
+    """Run command *argv, on failure raise klazz
 
-    klass should be derived from CommandFailed
+    klazz should be derived from CommandFailed
     """
     (rc, output) = run_command_status(*argv, **env)
     if rc != 0:
         raise klazz(rc, output, argv, env)
     return output
+
+
+def run_http_exc(klazz, url, **env):
+    """Run http GET request url, on failure raise klazz
+
+    klazz should be derived from CommandFailed
+    """
+    if url.startswith("https://") and "verify" not in env:
+        if "GIT_SSL_NO_VERIFY" in os.environ:
+            env["verify"] = False
+        else:
+            verify = git_config_get_value("http", "sslVerify", as_bool=True)
+            env["verify"] = verify != 'false'
+
+    try:
+        res = requests.get(url, **env)
+        if not 200 <= res.status_code < 300:
+            code = (res.status_code - 301) % 255 + 1
+            raise klazz(code, res.text, ('GET', url), env)
+        return res
+    except Exception as err:
+        raise klazz(255, str(err), ('GET', url), env)
 
 
 def get_version():
@@ -195,12 +217,13 @@ def run_custom_script(action):
             print(output)
 
 
-def git_config_get_value(section, option, default=None):
+def git_config_get_value(section, option, default=None, as_bool=False):
+    """Get config value for section/option."""
+    cmd = ["git", "config", "--get", "%s.%s" % (section, option)]
+    if as_bool:
+        cmd.insert(2, "--bool")
     try:
-        return run_command_exc(GitConfigException,
-                               "git", "config",
-                               "--get",
-                               "%s.%s" % (section, option)).strip()
+        return run_command_exc(GitConfigException, *cmd).strip()
     except GitConfigException as exc:
         if exc.rc == 1:
             return default
@@ -232,13 +255,10 @@ def set_hooks_commit_msg(remote, target_file):
             hook_url = urljoin(remote_url, '/tools/hooks/commit-msg')
             if VERBOSE:
                 print("Fetching commit hook from: %s" % hook_url)
-            res = requests.get(hook_url, stream=True)
-            if res.status_code == 200:
-                with open(target_file, 'wb') as f:
-                    for x in res.iter_content(1024):
-                        f.write(x)
-            else:
-                raise CannotInstallHook
+            res = run_http_exc(CannotInstallHook, hook_url, stream=True)
+            with open(target_file, 'wb') as f:
+                for x in res.iter_content(1024):
+                    f.write(x)
         else:
             (hostname, username, port, project_name) = \
                 parse_gerrit_ssh_params_from_git_url(remote_url)
@@ -374,6 +394,100 @@ def parse_gerrit_ssh_params_from_git_url(git_url):
     project_name = re.sub(r"^/|(\.git$)", "", path)
 
     return (hostname, username, port, project_name)
+
+
+def query_reviews(remote_url, change=None, current_patch_set=True,
+                  exception=CommandFailed, parse_exc=Exception):
+    if remote_url.startswith('http://') or remote_url.startswith('https://'):
+        query = query_reviews_over_http
+    else:
+        query = query_reviews_over_ssh
+    return query(remote_url,
+                 change=change,
+                 current_patch_set=current_patch_set,
+                 exception=exception,
+                 parse_exc=parse_exc)
+
+
+def query_reviews_over_http(remote_url, change=None, current_patch_set=True,
+                            exception=CommandFailed, parse_exc=Exception):
+    url = urljoin(remote_url, '/changes/')
+    if change:
+        if current_patch_set:
+            url += '?q=%s&o=CURRENT_REVISION' % change
+        else:
+            url += '?q=%s&o=ALL_REVISIONS' % change
+
+    if VERBOSE:
+        print("Query gerrit %s" % url)
+    request = run_http_exc(exception, url)
+    if VERBOSE:
+        print(request.text)
+    reviews = json.loads(request.text[4:])
+
+    # Reformat output to match ssh output
+    try:
+        for review in reviews:
+            review["number"] = str(review.pop("_number"))
+            if "revisions" not in review:
+                continue
+            patchsets = {}
+            for key, revision in review["revisions"].items():
+                fetch_value = list(revision["fetch"].values())[0]
+                patchset = {"number": str(revision["_number"]),
+                            "ref": fetch_value["ref"]}
+                patchsets[key] = patchset
+            review["patchSets"] = patchsets.values()
+            review["currentPatchSet"] = patchsets[review["current_revision"]]
+    except Exception as err:
+        raise parse_exc(err)
+
+    return reviews
+
+
+def query_reviews_over_ssh(remote_url, change=None, current_patch_set=True,
+                           exception=CommandFailed, parse_exc=Exception):
+    (hostname, username, port, project_name) = \
+        parse_gerrit_ssh_params_from_git_url(remote_url)
+
+    if change:
+        if current_patch_set:
+            query = "--current-patch-set change:%s" % change
+        else:
+            query = "--patch-sets change:%s" % change
+    else:
+        query = "project:%s status:open" % project_name
+
+    port = "-p%s" % port if port is not None else ""
+    if username is None:
+        userhost = hostname
+    else:
+        userhost = "%s@%s" % (username, hostname)
+
+    if VERBOSE:
+        print("Query gerrit %s %s" % (remote_url, query))
+    output = run_command_exc(
+        exception,
+        "ssh", "-x", port, userhost,
+        "gerrit", "query",
+        "--format=JSON %s" % query)
+    if VERBOSE:
+        print(output)
+
+    changes = []
+    try:
+        for line in output.split("\n"):
+            if line[0] == "{":
+                try:
+                    data = json.loads(line)
+                    if "type" not in data:
+                        changes.append(data)
+                except Exception:
+                    if VERBOSE:
+                        print(output)
+    except Exception as err:
+        raise parse_exc(err)
+    return changes
 
 
 def check_color_support():
@@ -638,60 +752,25 @@ class CannotParseOpenChangesets(ChangeSetException):
 
 def list_reviews(remote):
     remote_url = get_remote_url(remote)
-    (hostname, username, port, project_name) = \
-        parse_gerrit_ssh_params_from_git_url(remote_url)
+    reviews = query_reviews(remote_url,
+                            exception=CannotQueryOpenChangesets,
+                            parse_exc=CannotParseOpenChangesets)
 
-    if port is not None:
-        port = "-p %s" % port
-    else:
-        port = ""
-    if username is None:
-        userhost = hostname
-    else:
-        userhost = "%s@%s" % (username, hostname)
-
-    review_info = None
-    output = run_command_exc(
-        CannotQueryOpenChangesets,
-        "ssh", "-x", port, userhost,
-        "gerrit", "query",
-        "--format=JSON project:%s status:open" % project_name)
-
-    review_list = []
-    review_field_width = {}
     REVIEW_FIELDS = ('number', 'branch', 'subject')
-    FIELDS = range(0, len(REVIEW_FIELDS))
+    FIELDS = range(len(REVIEW_FIELDS))
     if check_color_support():
         review_field_color = (colors.yellow, colors.green, "")
         color_reset = colors.reset
     else:
         review_field_color = ("", "", "")
         color_reset = ""
-    review_field_width = [0, 0, 0]
     review_field_format = ["%*s", "%*s", "%*s"]
     review_field_justify = [+1, +1, -1]  # -1 is justify to right
 
-    for line in output.split("\n"):
-        # Warnings from ssh wind up in this output
-        if line[0] != "{":
-            print(line)
-            continue
-        try:
-            review_info = json.loads(line)
-        except Exception:
-            if VERBOSE:
-                print(output)
-            raise(CannotParseOpenChangesets, sys.exc_info()[1])
-
-        if 'type' in review_info:
-            break
-
-        review_list.append([review_info[f] for f in REVIEW_FIELDS])
-        for i in FIELDS:
-            review_field_width[i] = max(
-                review_field_width[i],
-                len(review_info[REVIEW_FIELDS[i]])
-            )
+    review_list = [[r[f] for f in REVIEW_FIELDS] for r in reviews]
+    review_field_width = dict()
+    for i in FIELDS:
+        review_field_width[i] = max(len(r[i]) for r in review_list)
 
     review_field_format = "  ".join([
         review_field_color[i] +
@@ -713,7 +792,7 @@ def list_reviews(remote):
         for (width, value) in zip(review_field_width, review_value):
             formatted_fields.extend([width, value])
         print(review_field_format % tuple(formatted_fields))
-    print("Found %d items for review" % review_info['rowCount'])
+    print("Found %d items for review" % len(reviews))
 
     return 0
 
@@ -763,53 +842,26 @@ class ResetHardFailed(CommandFailed):
 
 def fetch_review(review, masterbranch, remote):
     remote_url = get_remote_url(remote)
-    (hostname, username, port, project_name) = \
-        parse_gerrit_ssh_params_from_git_url(remote_url)
-
-    if port is not None:
-        port = "-p %s" % port
-    else:
-        port = ""
-    if username is None:
-        userhost = hostname
-    else:
-        userhost = "%s@%s" % (username, hostname)
 
     review_arg = review
-    patchset_opt = '--current-patch-set'
-
     review, patchset_number = parse_review_number(review)
-    if patchset_number is not None:
-        patchset_opt = '--patch-sets'
+    current_patch_set = patchset_number is None
 
-    review_info = None
-    output = run_command_exc(
-        CannotQueryPatchSet,
-        "ssh", "-x", port, userhost,
-        "gerrit", "query",
-        "--format=JSON %s change:%s" % (patchset_opt, review))
+    review_infos = query_reviews(remote_url,
+                                 change=review,
+                                 current_patch_set=current_patch_set,
+                                 exception=CannotQueryPatchSet,
+                                 parse_exc=ReviewInformationNotFound)
 
-    review_jsons = output.split("\n")
-    found_review = False
-    for review_json in review_jsons:
-        try:
-            review_info = json.loads(review_json)
-            found_review = True
-        except Exception:
-            pass
-        if found_review:
-            break
-    if not found_review:
-        if VERBOSE:
-            print(output)
+    if not len(review_infos):
         raise ReviewInformationNotFound(review)
+    review_info = review_infos[0]
 
     try:
         if patchset_number is None:
             refspec = review_info['currentPatchSet']['ref']
         else:
-            refspec = [ps for ps
-                       in review_info['patchSets']
+            refspec = [ps for ps in review_info['patchSets']
                        if ps['number'] == patchset_number][0]['ref']
     except IndexError:
         raise PatchSetNotFound(review_arg)
