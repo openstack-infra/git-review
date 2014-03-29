@@ -1,9 +1,9 @@
 .\" Uses mdoc(7). See `man 7 mdoc` for details about the syntax used here
 .\"
 .Dd April 4th, 2012
-.Dt GIT-REVIEW 1
+.Dt GIT\-REVIEW 1
 .Sh NAME
-.Nm git-review
+.Nm git\-review
 .Nd Submit changes to Gerrit for review
 .Sh SYNOPSIS
 .Nm
@@ -30,7 +30,7 @@
 .Op Fl r Ar remote
 .Op Fl uv
 .Fl m
-.Ar change-ps-range
+.Ar change\-ps\-range
 .Op Ar branch
 .Nm
 .Op Fl r Ar remote
@@ -43,7 +43,7 @@
 .Op Fl t Ar topic
 .Op Ar branch
 .Nm
-.Fl -version
+.Fl \-version
 .Sh DESCRIPTION
 .Nm
 automates and streamlines some of the tasks involved with
@@ -56,21 +56,21 @@ control system.
 can be
 .Ar changeNumber
 as obtained using
-.Fl --list
+.Fl \-\-list
 option, or it can be 
 .Ar changeNumber,patchsetNumber
 for fetching exact patchset from the change.
-In that case local branch name will have a -patch[patchsetNumber] suffix.
+In that case local branch name will have a \-patch[patchsetNumber] suffix.
 .Pp
 The following options are available:
-.Bl -tag -width indent
-.It Fl d Ar change , Fl -download= Ns Ar change
+.Bl \-tag \-width indent
+.It Fl d Ar change , Fl \-download= Ns Ar change
 Download
 .Ar change
 from Gerrit
 into a local branch. The branch will be named after the patch author and the name of a topic.
 If the local branch already exists, it will attempt to update with the latest patchset for this change.
-.It Fl x Ar change , Fl -cherrypick= Ns Ar change
+.It Fl x Ar change , Fl \-cherrypick= Ns Ar change
 Apply
 .Ar change
 from Gerrit and commit into the current local branch ("cherry pick").
@@ -81,7 +81,7 @@ it. On the other hand, be aware: if you are not careful, this can easily result
 in additional patch sets for dependent changes. Also, if the current branch is
 different enough, the change may not apply at all or produce merge conflicts
 that need to be resolved by hand.
-.It Fl N Ar change , Fl -cherrypickonly= Ns Ar change
+.It Fl N Ar change , Fl \-cherrypickonly= Ns Ar change
 Apply
 .Ar change
 from Gerrit
@@ -92,25 +92,25 @@ it. Useful if you want to merge several commits into one that will be submitted 
 .Pp
 If the current branch is different enough, the change may not apply at all
 or produce merge conflicts that need to be resolved by hand.
-.It Fl X Ar change , Fl -cherrypickindicate= Ns Ar change
+.It Fl X Ar change , Fl \-cherrypickindicate= Ns Ar change
 Apply
 .Ar change
 from Gerrit and commit into the current local branch ("cherry pick"),
-indicating which commit this change was cherry-picked from.
+indicating which commit this change was cherry\-picked from.
 .Pp
-This makes it possible to re-review a change for a different branch without
+This makes it possible to re\-review a change for a different branch without
 creating a local branch for it.
 .Pp
 If the current branch is different enough, the change may not apply at all
 or produce merge conflicts that need to be resolved by hand.
-.It Fl m Ar change-ps-range , Fl -compare= Ns Ar change-ps-range
+.It Fl m Ar change\-ps\-range , Fl \-compare= Ns Ar change\-ps\-range
 Download the specified  patchsets for
 .Ar change
-from Gerrit, rebase both on master and display differences (git-diff).
+from Gerrit, rebase both on master and display differences (git\-diff).
 .Pp
-.Ar change-ps-range
+.Ar change\-ps\-range
 can be specified as
-.Ar changeNumber, Ns Ar oldPatchSetNumber Ns Op Ns Ar -newPatchSetNumber
+.Ar changeNumber, Ns Ar oldPatchSetNumber Ns Op Ns Ar \-newPatchSetNumber
 .Pp
 .Ar oldPatchSetNumber
 is mandatory, and if
@@ -121,51 +121,51 @@ This makes it possible to easily compare what has changed from last time you
 reviewed the proposed change.
 .Pp
 If the master branch is different enough, the rebase can produce merge conflicts.
-If that happens rebasing will be aborted and diff displayed for not-rebased branches.
+If that happens rebasing will be aborted and diff displayed for not\-rebased branches.
 You can also use
-.Ar --no-rebase ( Ar -R )
+.Ar \-\-no\-rebase ( Ar \-R )
 to always skip rebasing.
-.It Fl f , Fl -finish
+.It Fl f , Fl \-finish
 Close down the local branch and switch back to the target branch on
 successful submission.
-.It Fl n , Fl -dry-run
+.It Fl n , Fl \-dry\-run
 Don\(aqt actually perform any commands that have direct effects. Print them
 instead.
-.It Fl r Ar remote , Fl -remote= Ns Ar remote
+.It Fl r Ar remote , Fl \-remote= Ns Ar remote
 Git remote to use for Gerrit.
-.It Fl s , Fl -setup
+.It Fl s , Fl \-setup
 Just run the repo setup commands but don\(aqt submit anything.
-.It Fl t Ar topic , Fl -topic= Ns Ar topic
+.It Fl t Ar topic , Fl \-topic= Ns Ar topic
 Sets the target topic for this change on the gerrit server.
 If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
-.It Fl u , Fl -update
+.It Fl u , Fl \-update
 Skip cached local copies and force updates from network resources.
-.It Fl l , Fl -list
+.It Fl l , Fl \-list
 List the available reviews on the gerrit server for this project.
-.It Fl y , Fl -yes
+.It Fl y , Fl \-yes
 Indicate that you do, in fact, understand if you are submitting more than
 one patch.
-.It Fl v Fl -verbose
+.It Fl v Fl \-verbose
 Turns on more verbose output.
-.It Fl D , Fl -draft
+.It Fl D , Fl \-draft
 Submit review as a draft. Requires Gerrit 2.3 or newer.
-.It Fl R , Fl -no-rebase
+.It Fl R , Fl \-no\-rebase
 Do not automatically perform a rebase before submitting the change to
 Gerrit.
 .Pp
 When submitting a change for review, you will usually want it to be based on the tip of upstream branch in order to avoid possible conflicts. When amending a change and rebasing the new patchset, the Gerrit web interface will show a difference between the two patchsets which contains all commits in between. This may confuse many reviewers that would expect to see a much simpler difference.
 .Pp
 Also can be used for
-.Fl -compare
+.Fl \-compare
 to skip automatic rebase of fetched reviews.
-.It Fl -version
+.It Fl \-version
 Print the version number and exit.
 .El
 .Sh CONFIGURATION
 This utility can be configured by adding entries to Git configuration.
 .Pp
 The following configuration keys are supported:
-.Bl -tag
+.Bl \-tag
 .It gitreview.username
 Default username used to access the repository. If not specified
 in the Git configuration, Git remote or
@@ -175,7 +175,7 @@ file, the user will be prompted to specify the username.
 Example entry in the
 .Pa .gitconfig
 file:
-.Bd -literal -offset indent
+.Bd \-literal \-offset indent
 [gitreview]
 username=\fImygerrituser\fP
 .Ed
@@ -184,9 +184,9 @@ This setting determines whether changes submitted will
 be rebased to the newest state of the branch.
 .Pp
 A value of 'true' or 'false' should be specified.
-.Bl -tag
+.Bl \-tag
 .It false
-Do not rebase changes on submit - equivalent to setting
+Do not rebase changes on submit \- equivalent to setting
 .Fl R
 when submitting changes.
 .It true
@@ -196,7 +196,7 @@ overridden by
 file.
 .El
 .Pp
-This setting takes precedence over repository-specific configuration
+This setting takes precedence over repository\-specific configuration
 in the
 .Pa .gitreview
 file.
@@ -208,7 +208,7 @@ with your project, it is recommended that you create
 a file at the root of the repository named
 .Pa .gitreview
 and place information about your gerrit installation in it.  The format is similar to the Windows .ini file format:
-.Bd -literal -offset indent
+.Bd \-literal \-offset indent
 [gerrit]
 host=\fIhostname\fP
 port=\fITCP port number of gerrit\fP
@@ -228,7 +228,7 @@ to zero will make
 not to rebase changes by default (same as the
 .Fl R
 command line option)
-.Bd -literal -offset indent
+.Bd \-literal \-offset indent
 [gerrit]
 host=review.example.com
 port=29418
@@ -243,10 +243,10 @@ defaultrebase=0
 Normally, exit status is 0 if executed successfully.
 Exit status 1 indicates general error, sometimes more
 specific error codes are available:
-.Bl -tag -width 999
+.Bl \-tag \-width 999
 .It 2
 Gerrit
-.Ar commit-msg
+.Ar commit\-msg
 hook could not be successfully installed.
 .It 32
 Cannot fetch list of open changesets from Gerrit.
@@ -296,8 +296,8 @@ error in running the "git" command.
 .Sh EXAMPLES
 To fetch a remote change number 3004:
 .Pp
-.Bd -literal -offset indent
-$ git-review -d 3004
+.Bd \-literal \-offset indent
+$ git\-review \-d 3004
 Downloading refs/changes/04/3004/1 from gerrit into
 review/someone/topic_name
 Switched to branch 'review/someone/topic_name
@@ -311,22 +311,22 @@ to name a local branch. This facilitates easier identification of changes.
 .Pp
 To fetch a remote patchset number 5 from change number 3004:
 .Pp
-.Bd -literal -offset indent
-$ git-review -d 3004,5
+.Bd \-literal \-offset indent
+$ git\-review \-d 3004,5
 Downloading refs/changes/04/3004/5 from gerrit into
-review/someone/topic_name-patch5
-Switched to branch 'review/someone/topic_name-patch5
+review/someone/topic_name\-patch5
+Switched to branch 'review/someone/topic_name\-patch5
 $ git branch
   master
-* review/author/topic_name-patch5
+* review/author/topic_name\-patch5
 .Ed
 .Pp
 To send a change for review and delete local branch afterwards:
-.Bd -literal -offset indent
-$ git-review -f
+.Bd \-literal \-offset indent
+$ git\-review \-f
 remote: Resolving deltas:   0% (0/8)
 To ssh://username@review.example.com/departement/project.git
- * [new branch]      HEAD -> refs/for/master/topic_name
+ * [new branch]      HEAD \-> refs/for/master/topic_name
 Switched to branch 'master'
 Deleted branch 'review/someone/topic_name'
 $ git branch
@@ -344,7 +344,7 @@ port
 in the branch
 .Cm master
 :
-.Bd -literal -offset indent
+.Bd \-literal \-offset indent
 [gerrit]
 host=review.example.com
 port=29418
@@ -353,7 +353,7 @@ defaultbranch=master
 .Ed
 .Sh BUGS
 Bug reports can be submitted to
-.Lk https://launchpad.net/git-review
+.Lk https://launchpad.net/git\-review
 .Sh AUTHORS
 .Nm
 is maintained by
