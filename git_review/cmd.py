@@ -121,7 +121,11 @@ def run_command_status(*argv, **env):
     if VERBOSE:
         print(datetime.datetime.now(), "Running:", " ".join(argv))
     if len(argv) == 1:
-        argv = shlex.split(str(argv[0]))
+        # for python2 compatibility with shlex
+        if sys.version_info < (3,) and isinstance(argv[0], unicode):
+            argv = shlex.split(argv[0].encode('utf-8'))
+        else:
+            argv = shlex.split(str(argv[0]))
     newenv = os.environ
     newenv.update(env)
     p = subprocess.Popen(argv, stdout=subprocess.PIPE,
