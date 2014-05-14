@@ -20,10 +20,14 @@ import sys
 
 if sys.version < '3':
     import urllib
+    import urlparse
     urlopen = urllib.urlopen
+    urlparse = urlparse.urlparse
 else:
+    import urllib.parse
     import urllib.request
     urlopen = urllib.request.urlopen
+    urlparse = urllib.parse.urlparse
 
 import fixtures
 import testtools
@@ -128,10 +132,10 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self.ssh_dir = self._dir('site', 'tmp', 'ssh')
         self.project_ssh_uri = (
             'ssh://test_user@%s:%s/test/test_project.git' % (
-            ssh_addr, ssh_port))
+                ssh_addr, ssh_port))
         self.project_http_uri = (
             'http://test_user:test_pass@%s:%s/test/test_project.git' % (
-            http_addr, http_port))
+                http_addr, http_port))
 
         self._run_gerrit(ssh_addr, ssh_port, http_addr, http_port)
         self._configure_ssh(ssh_addr, ssh_port)
@@ -144,11 +148,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('clone', self.project_uri)
         utils.write_to_file(self._dir('test', 'test_file.txt'),
                             'test file created'.encode())
-        cfg = ('[gerrit]\n'
-               'host=%s\n'
-               'port=%s\n'
-               'project=test/test_project.git' % (ssh_addr, ssh_port))
-        utils.write_to_file(self._dir('test', '.gitreview'), cfg.encode())
+        self._create_gitreview_file()
 
         # push changes to the Gerrit
         self._run_git('add', '--all')
@@ -236,6 +236,18 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         pid = os.getpid()
         host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
         return host, 29418, host, 8080, self._dir('gerrit', 'site-' + host)
+
+    def _create_gitreview_file(self):
+        cfg = ('[gerrit]\n'
+               'scheme=%s\n'
+               'host=%s\n'
+               'port=%s\n'
+               'project=test/test_project.git')
+        parsed = urlparse(self.project_uri)
+        host_port = parsed.netloc.rpartition('@')[-1]
+        host, __, port = host_port.partition(':')
+        cfg %= parsed.scheme, host, port
+        utils.write_to_file(self._dir('test', '.gitreview'), cfg.encode())
 
 
 class HttpMixin(object):
