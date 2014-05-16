@@ -51,7 +51,7 @@ class GerritHelpers(object):
         if not os.path.exists(self._dir('gerrit', 'gerrit.war')):
             resp = urlopen(
                 'http://gerrit-releases.storage.googleapis.com/'
-                'gerrit-2.6.1.war'
+                'gerrit-2.8.5.war'
             )
 
             utils.write_to_file(self._dir('gerrit', 'gerrit.war'),
@@ -65,7 +65,8 @@ class GerritHelpers(object):
         # initialize Gerrit
         utils.run_cmd('java', '-jar', self._dir('gerrit', 'gerrit.war'),
                       'init', '-d', self.gsite_dir,
-                      '--batch', '--no-auto-start')
+                      '--batch', '--no-auto-start', '--install-plugin',
+                      'download-commands')
 
         # create SSH public key
         key_file = self._dir('gsite', 'test_ssh_key')
@@ -128,10 +129,10 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self.ssh_dir = self._dir('site', 'tmp', 'ssh')
         self.project_ssh_uri = (
             'ssh://test_user@%s:%s/test/test_project.git' % (
-            ssh_addr, ssh_port))
+                ssh_addr, ssh_port))
         self.project_http_uri = (
             'http://test_user:test_pass@%s:%s/test/test_project.git' % (
-            http_addr, http_port))
+                http_addr, http_port))
 
         self._run_gerrit(ssh_addr, ssh_port, http_addr, http_port)
         self._configure_ssh(ssh_addr, ssh_port)
