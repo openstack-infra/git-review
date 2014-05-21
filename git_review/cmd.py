@@ -1230,5 +1230,14 @@ if __name__ == "__main__":
     try:
         main()
     except GitReviewException as e:
-        print(e)
+        # If one does unguarded print(e) here, in certain locales the implicit
+        # str(e) blows up with familiar "UnicodeEncodeError ... ordinal not in
+        # range(128)". See rhbz#1058167.
+        try:
+            u = unicode(e)
+        except NameError:
+            # Python 3, we're home free.
+            print(e)
+        else:
+            print(u.encode('utf-8'))
         sys.exit(e.EXIT_CODE)
