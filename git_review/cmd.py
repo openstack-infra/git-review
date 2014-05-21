@@ -1104,29 +1104,29 @@ def main():
                         (os.path.split(sys.argv[0])[-1], get_version()))
     parser.add_argument("branch", nargs="?")
 
-    try:
-        (top_dir, git_dir) = git_directories()
-    except GitDirectoriesException:
-        if sys.argv[1:] in ([], ['-h'], ['--help']):
-            parser.print_help()
-            sys.exit(1)
-        raise
-
-    config = get_config(os.path.join(top_dir, ".gitreview"))
-    defaultrebase = convert_bool(
-        git_config_get_value("gitreview", "rebase",
-                             default=str(config['defaultrebase'])))
     parser.set_defaults(dry=False,
                         draft=False,
-                        rebase=defaultrebase,
                         verbose=False,
                         update=False,
                         setup=False,
                         list=False,
-                        yes=False,
-                        branch=config['defaultbranch'],
-                        remote=config['defaultremote'])
+                        yes=False)
+    try:
+        (top_dir, git_dir) = git_directories()
+    except GitDirectoriesException as no_git_dir:
+        pass
+    else:
+        no_git_dir = False
+        config = get_config(os.path.join(top_dir, ".gitreview"))
+        defaultrebase = convert_bool(
+            git_config_get_value("gitreview", "rebase",
+                                 default=str(config['defaultrebase'])))
+        parser.set_defaults(rebase=defaultrebase,
+                            branch=config['defaultbranch'],
+                            remote=config['defaultremote'])
     options = parser.parse_args()
+    if no_git_dir:
+        raise no_git_dir
 
     if options.license:
         print(COPYRIGHT)
