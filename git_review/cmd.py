@@ -126,7 +126,7 @@ def run_command_status(*argv, **env):
             argv = shlex.split(argv[0].encode('utf-8'))
         else:
             argv = shlex.split(str(argv[0]))
-    newenv = os.environ
+    newenv = os.environ.copy()
     newenv.update(env)
     p = subprocess.Popen(argv, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, env=newenv)
@@ -643,15 +643,15 @@ def get_branch_name(target_branch):
     if _branch_name is not None:
         return _branch_name
     _branch_name = None
+    cmd = "git branch"
     has_color = check_color_support()
     if has_color:
-        color_never = "--color=never"
-    else:
-        color_never = ""
-    for branch in run_command("git branch %s" % color_never).split("\n"):
+        cmd += " --color=never"
+    for branch in run_command(cmd, LANG='C').split("\n"):
         if branch.startswith('*'):
             _branch_name = branch.split()[1].strip()
-    if _branch_name == "(no":
+            break
+    if _branch_name == "(no" or _branch_name == "(detached":
         _branch_name = target_branch
     return _branch_name
 

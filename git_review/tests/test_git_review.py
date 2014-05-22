@@ -1,3 +1,5 @@
+# -*- coding: utf8 -*-
+
 # Copyright (c) 2013 Mirantis Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import shutil
 
 from git_review import tests
@@ -167,6 +170,24 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         review_res = self._run_git_review('-v', '-F')
         self.assertIn('rebase', review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head)
+
+    def test_detached_head(self):
+        """Test on a detached state: we shouldn't have '(detached' as topic."""
+        self._run_git_review('-s')
+        curr_branch = self._run_git('rev-parse', '--abbrev-ref', 'HEAD')
+        # Note: git checkout --detach has been introduced in git 1.7.5 (2011)
+        self._run_git('checkout', curr_branch + '^0')
+        self._simple_change('some new message', 'just another file',
+                            self._dir('test', 'new_test_file.txt'))
+        # switch to French, 'git branch' should return '(détaché du HEAD)'
+        lang_env = os.getenv('LANG', 'C')
+        os.environ.update(LANG='fr_FR.UTF-8')
+        review = self._run_git_review('-n')
+        os.environ.update(LANG=lang_env)
+        # reattach
+        self._run_git('checkout', curr_branch)
+        # we should push to '(...)/master', not '(...)/(detached'
+        self.assertTrue(review.strip().split('\n')[-1].endswith(curr_branch))
 
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
