@@ -52,7 +52,7 @@ GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
 PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
-DEFAULTS = dict(hostname=False, port='29418', project=False,
+DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
                 defaultbranch='master', defaultremote="gerrit",
                 defaultrebase="1")
 
@@ -298,15 +298,18 @@ def test_remote_url(remote_url):
         return False
 
 
-def make_remote_url(username, hostname, port, project):
+def make_remote_url(scheme, username, hostname, port, project):
     """Builds a gerrit remote URL."""
+    if port is None and scheme == 'ssh':
+        port = 29418
+    hostport = '%s:%s' % (hostname, port) if port else hostname
     if username is None:
-        return "ssh://%s:%s/%s" % (hostname, port, project)
+        return "%s://%s/%s" % (scheme, hostport, project)
     else:
-        return "ssh://%s@%s:%s/%s" % (username, hostname, port, project)
+        return "%s://%s@%s/%s" % (scheme, username, hostport, project)
 
 
-def add_remote(hostname, port, project, remote):
+def add_remote(scheme, hostname, port, project, remote):
     """Adds a gerrit remote."""
     asked_for_username = False
 
@@ -315,16 +318,14 @@ def add_remote(hostname, port, project, remote):
         username = os.getenv("USERNAME")
     if not username:
         username = os.getenv("USER")
-    if port is None:
-        port = 29418
 
-    remote_url = make_remote_url(username, hostname, port, project)
+    remote_url = make_remote_url(scheme, username, hostname, port, project)
     if VERBOSE:
         print("No remote set, testing %s" % remote_url)
     if not test_remote_url(remote_url):
         print("Could not connect to gerrit.")
         username = do_input("Enter your gerrit username: ")
-        remote_url = make_remote_url(username, hostname, port, project)
+        remote_url = make_remote_url(scheme, username, hostname, port, project)
         print("Trying again with %s" % remote_url)
         if not test_remote_url(remote_url):
             raise Exception("Could not connect to gerrit at %s" % remote_url)
@@ -524,6 +525,7 @@ def load_config_file(config_file):
     configParser = ConfigParser.ConfigParser()
     configParser.read(config_file)
     options = {
+        'scheme': 'scheme',
         'hostname': 'host',
         'port': 'port',
         'project': 'project',
@@ -551,7 +553,7 @@ def update_remote(remote):
     return True
 
 
-def check_remote(branch, remote, hostname, port, project):
+def check_remote(branch, remote, scheme, hostname, port, project):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
     has_color = check_color_support()
@@ -573,7 +575,7 @@ def check_remote(branch, remote, hostname, port, project):
         update_remote(remote)
         return
 
-    if hostname is False or port is False or project is False:
+    if hostname is False or project is False:
         # This means there was no .gitreview file
         printwrap("No '.gitreview' file found in this repository. We don't "
                   "know where your gerrit is. Please manually create a remote "
@@ -582,7 +584,7 @@ def check_remote(branch, remote, hostname, port, project):
 
     # Gerrit remote not present, try to add it
     try:
-        add_remote(hostname, port, project, remote)
+        add_remote(scheme, hostname, port, project, remote)
     except Exception:
         print(sys.exc_info()[2])
         printwrap("We don't know where your gerrit is. Please manually create "
@@ -1141,7 +1143,7 @@ def main():
     yes = options.yes
     status = 0
 
-    check_remote(branch, remote,
+    check_remote(branch, remote, config['scheme'],
                  config['hostname'], config['port'], config['project'])
 
     if options.changeidentifier:
