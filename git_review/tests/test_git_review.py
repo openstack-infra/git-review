@@ -194,6 +194,36 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         # we should push to '(...)/master', not '(...)/(detached'
         self.assertTrue(review.strip().split('\n')[-1].endswith(curr_branch))
 
+    def test_git_review_l(self):
+        self._run_git_review('-s')
+
+        # Populate "project" repo
+        self._simple_change('project: test1', 'project: change1, merged')
+        self._simple_change('project: test2', 'project: change2, open')
+        self._simple_change('project: test3', 'project: change3, abandoned')
+        self._run_git_review('-y')
+        head = self._run_git('rev-parse', 'HEAD')
+        head_2 = self._run_git('rev-parse', 'HEAD^^')
+        self._run_gerrit_cli('review', head_2, '--code-review=+2', '--submit')
+        self._run_gerrit_cli('review', head, '--abandon')
+
+        # Populate "project2" repo
+        self._run_gerrit_cli('create-project', '--empty-commit', '--name',
+                             'test/test_project2')
+        project2_uri = self.project_uri.replace('test/test_project',
+                                                'test/test_project2')
+        self._run_git('fetch', project2_uri, 'HEAD')
+        self._run_git('checkout', 'FETCH_HEAD')
+        self._simple_change('project2: test1', 'project2: change1, open')
+        self._run_git('push', project2_uri, 'HEAD:refs/for/master')
+
+        # Only project1 open changes
+        result = self._run_git_review('-l')
+        self.assertNotIn('project: change1, merged', result)
+        self.assertIn('project: change2, open', result)
+        self.assertNotIn('project: change3, abandoned', result)
+        self.assertNotIn('project2:', result)
+
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""

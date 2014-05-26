@@ -34,6 +34,7 @@ if sys.version < '3':
     import ConfigParser
     import urllib
     import urlparse
+    urlencode = urllib.urlencode
     urljoin = urlparse.urljoin
     urlparse = urlparse.urlparse
     do_input = raw_input
@@ -41,6 +42,7 @@ else:
     import configparser as ConfigParser
     import urllib.parse
     import urllib.request
+    urlencode = urllib.parse.urlencode
     urljoin = urllib.parse.urljoin
     urlparse = urllib.parse.urlparse
     do_input = input
@@ -422,6 +424,10 @@ def query_reviews_over_http(remote_url, change=None, current_patch_set=True,
             url += '?q=%s&o=CURRENT_REVISION' % change
         else:
             url += '?q=%s&o=ALL_REVISIONS' % change
+    else:
+        project_name = re.sub(r"^/|(\.git$)", "", urlparse(remote_url).path)
+        params = urlencode({'q': 'project:%s status:open' % project_name})
+        url += '?' + params
 
     if VERBOSE:
         print("Query gerrit %s" % url)
