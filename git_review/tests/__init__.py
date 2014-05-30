@@ -145,6 +145,9 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_gerrit_cli('create-project', '--empty-commit',
                              '--name', 'test/test_project')
 
+        # ensure user proxy conf doesn't interfere with tests
+        os.environ['NO_PROXY'] = '*'
+
         # prepare repository for the testing
         self._run_git('clone', self.project_uri)
         utils.write_to_file(self._dir('test', 'test_file.txt'),
