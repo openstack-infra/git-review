@@ -35,6 +35,11 @@ from testtools import content
 
 from git_review.tests import utils
 
+WAR_URL = 'http://gerrit-releases.storage.googleapis.com/gerrit-2.8.5.war'
+# Update GOLDEN_SITE_VER for every change altering golden site, including
+# WAR_URL changes. Set new value to something unique (just +1 it for example)
+GOLDEN_SITE_VER = '0'
+
 
 class GerritHelpers(object):
 
@@ -46,31 +51,47 @@ class GerritHelpers(object):
         self.primary_dir = os.path.abspath(os.path.curdir)
         self.gerrit_dir = self._dir('primary', '.gerrit')
         self.gsite_dir = self._dir('gerrit', 'golden_site')
+        self.gerrit_war = self._dir('gerrit', WAR_URL.split('/')[-1])
 
     def ensure_gerrit_war(self):
         # check if gerrit.war file exists in .gerrit directory
         if not os.path.exists(self.gerrit_dir):
             os.mkdir(self.gerrit_dir)
 
-        if not os.path.exists(self._dir('gerrit', 'gerrit.war')):
-            resp = urlopen(
-                'http://gerrit-releases.storage.googleapis.com/'
-                'gerrit-2.8.5.war'
-            )
-
-            utils.write_to_file(self._dir('gerrit', 'gerrit.war'),
-                                resp.read())
+        if not os.path.exists(self.gerrit_war):
+            print("Downloading Gerrit binary from %s..." % WAR_URL)
+            resp = urlopen(WAR_URL)
+            utils.write_to_file(self.gerrit_war, resp.read())
+            print("Saved to %s" % self.gerrit_war)
 
     def init_gerrit(self):
         """Run Gerrit from the war file and configure it."""
+        golden_ver_file = self._dir('gsite', 'golden_ver')
         if os.path.exists(self.gsite_dir):
-            return
+            if not os.path.exists(golden_ver_file):
+                golden_ver = '0'
+            else:
+                with open(golden_ver_file) as f:
+                    golden_ver = f.read().strip()
+            if GOLDEN_SITE_VER != golden_ver:
+                print("Existing golden site has version %s, removing..." %
+                      golden_ver)
+                shutil.rmtree(self.gsite_dir)
+            else:
+                print("Golden site of version %s already exists" %
+                      GOLDEN_SITE_VER)
+                return
+
+        print("Creating a new golden site of version " + GOLDEN_SITE_VER)
 
         # initialize Gerrit
-        utils.run_cmd('java', '-jar', self._dir('gerrit', 'gerrit.war'),
+        utils.run_cmd('java', '-jar', self.gerrit_war,
                       'init', '-d', self.gsite_dir,
                       '--batch', '--no-auto-start', '--install-plugin',
                       'download-commands')
+
+        with open(golden_ver_file, 'w') as f:
+            f.write(GOLDEN_SITE_VER)
 
         # create SSH public key
         key_file = self._dir('gsite', 'test_ssh_key')
