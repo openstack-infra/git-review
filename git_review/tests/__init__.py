@@ -251,7 +251,8 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
             cmd_file = self._dir('ssh', cmd)
             s = '#!/bin/sh\n' \
                 '/usr/bin/%s -i %s -o UserKnownHostsFile=%s ' \
-                '-o IdentitiesOnly=yes $@' % \
+                '-o IdentitiesOnly=yes ' \
+                '-o PasswordAuthentication=no $@' % \
                 (cmd,
                  self._dir('gsite', 'test_ssh_key'),
                  self._dir('ssh', 'known_hosts'))
