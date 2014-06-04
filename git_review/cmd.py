@@ -618,6 +618,14 @@ def rebase_changes(branch, remote, interactive=True):
         return False
     _orig_head = output
 
+    cmd = "git show-ref --quiet --verify refs/%s" % remote_branch
+    (status, output) = run_command_status(cmd)
+    if status != 0:
+        printwrap("The branch '%s' does not exist on the given remote '%s'. "
+                  "If these changes are intended to start a new branch, "
+                  "re-run with the '-R' option enabled." % (branch, remote))
+        sys.exit(1)
+
     if interactive:
         cmd = "git rebase -p -i %s" % remote_branch
     else:

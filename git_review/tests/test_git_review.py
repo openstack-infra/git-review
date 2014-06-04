@@ -120,6 +120,14 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         review_res = self._run_git_review('-y')
         self.assertIn("Processing changes: new: 2", review_res)
 
+    def test_rebase_no_remote_branch_msg(self):
+        """Test message displayed where no remote branch exists."""
+        self._run_git_review('-s')
+        self._run_git('checkout', '-b', 'new_branch')
+        exc = self.assertRaises(Exception, self._run_git_review, 'new_branch')
+        self.assertIn("The branch 'new_branch' does not exist on the given "
+                      "remote 'gerrit'", exc.args[0])
+
     def test_need_rebase_no_upload(self):
         """Test change needing a rebase does not upload."""
         self._run_git_review('-s')
