@@ -176,6 +176,14 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertIn('rebase', review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head)
 
+    def _assert_branch_would_be(self, branch):
+        output = self._run_git_review('-n')
+        # last non-empty line should be:
+        #       git push gerrit HEAD:refs/publish/master
+        last_line = output.strip().split('\n')[-1]
+        branch_was = last_line.rsplit(' ', 1)[-1].split('/', 2)[-1]
+        self.assertEqual(branch, branch_was)
+
     def test_detached_head(self):
         """Test on a detached state: we shouldn't have '(detached' as topic."""
         self._run_git_review('-s')
@@ -187,12 +195,30 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         # switch to French, 'git branch' should return '(détaché du HEAD)'
         lang_env = os.getenv('LANG', 'C')
         os.environ.update(LANG='fr_FR.UTF-8')
-        review = self._run_git_review('-n')
-        os.environ.update(LANG=lang_env)
-        # reattach
-        self._run_git('checkout', curr_branch)
-        # we should push to '(...)/master', not '(...)/(detached'
-        self.assertTrue(review.strip().split('\n')[-1].endswith(curr_branch))
+        try:
+            self._assert_branch_would_be(curr_branch)
+        finally:
+            os.environ.update(LANG=lang_env)
+
+    def test_bug_topic(self):
+        self._run_git_review('-s')
+        self._simple_change('a change', 'new change for bug 123')
+        self._assert_branch_would_be('master/bug/123')
+
+    def test_bug_topic_newline(self):
+        self._run_git_review('-s')
+        self._simple_change('a change', 'new change not for bug\n123')
+        self._assert_branch_would_be('master')
+
+    def test_bp_topic(self):
+        self._run_git_review('-s')
+        self._simple_change('a change', 'new change for blueprint asdf')
+        self._assert_branch_would_be('master/bp/asdf')
+
+    def test_bp_topic_newline(self):
+        self._run_git_review('-s')
+        self._simple_change('a change', 'new change not for bluepring\nasdf')
+        self._assert_branch_would_be('master')
 
     def test_git_review_l(self):
         self._run_git_review('-s')
