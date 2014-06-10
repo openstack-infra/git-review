@@ -732,7 +732,14 @@ def get_topic(target_branch):
                          "/".join(branch_parts[2:]))
 
     log_output = run_command("git log HEAD^1..HEAD")
-    bug_re = r'\b([Bb]ug|[Ll][Pp])\s*[:]?\s*[#]?\s*(\d+)'
+    bug_re = r'''(?x)                # verbose regexp
+                 \b([Bb]ug|[Ll][Pp]) # bug or lp
+                 [ \t\f\v]*          # don't want to match newline
+                 [:]?                # separator if needed
+                 [ \t\f\v]*          # don't want to match newline
+                 [#]?                # if needed
+                 [ \t\f\v]*          # don't want to match newline
+                 (\d+)               # bug number'''
 
     match = re.search(bug_re, log_output)
     if match is not None:
@@ -740,7 +747,12 @@ def get_topic(target_branch):
                          "for the topic of the change submitted",
                          "bug/%s" % match.group(2))
 
-    bp_re = r'\b([Bb]lue[Pp]rint|[Bb][Pp])\s*[#:]?\s*([0-9a-zA-Z-_]+)'
+    bp_re = r'''(?x)                         # verbose regexp
+                \b([Bb]lue[Pp]rint|[Bb][Pp]) # a blueprint or bp
+                [ \t\f\v]*                   # don't want to match newline
+                [#:]?                        # separator if needed
+                [ \t\f\v]*                   # don't want to match newline
+                ([0-9a-zA-Z-_]+)             # any identifier or number'''
     match = re.search(bp_re, log_output)
     if match is not None:
         return use_topic("Using blueprint number %s "
