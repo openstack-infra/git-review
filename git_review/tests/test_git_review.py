@@ -31,13 +31,9 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertIn('remote: New Changes:', self._run_git_review())
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
 
-    def _configure_gitreview_username(self):
-        self._run_git('config', '--add', 'gitreview.username', 'test_user')
-
     def test_git_review_s(self):
         """Test git-review -s."""
         self._run_git('remote', 'rm', 'gerrit')
-        self._configure_gitreview_username()
         self._run_git_review('-s')
         self._simple_change('test file modified', 'test commit message')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
@@ -45,7 +41,6 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_git_review_s_in_detached_head(self):
         """Test git-review -s in detached HEAD state."""
         self._run_git('remote', 'rm', 'gerrit')
-        self._configure_gitreview_username()
         master_sha1 = self._run_git('rev-parse', 'master')
         self._run_git('checkout', master_sha1)
         self._run_git_review('-s')
@@ -60,7 +55,6 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
         # Review setup with an outdated repo
         self._run_git('remote', 'rm', 'gerrit')
-        self._configure_gitreview_username()
         self._run_git_review('-s')
         self._simple_change('test file modified', 'test commit message 2')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
@@ -253,8 +247,4 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""
-
-    def _configure_gitreview_username(self):
-        # trick to set http password
-        self._run_git('config', '--add', 'gitreview.username',
-                      'test_user:test_pass')
+    pass

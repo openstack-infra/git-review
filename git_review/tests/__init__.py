@@ -186,6 +186,9 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('remote', 'add', 'gerrit', self.project_uri)
         self.addCleanup(shutil.rmtree, self.test_dir)
 
+        # ensure user is configured for all tests
+        self._configure_gitreview_username()
+
     def attach_on_exception(self, filename):
         @self.addOnException
         def attach_file(exc_info):
@@ -258,6 +261,9 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         os.environ['PATH'] = self.ssh_dir + os.pathsep + os.environ['PATH']
         os.environ['GIT_SSH'] = self._dir('ssh', 'ssh')
 
+    def _configure_gitreview_username(self):
+        self._run_git('config', 'gitreview.username', 'test_user')
+
     def _pick_gerrit_port_and_dir(self):
         pid = os.getpid()
         host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
@@ -282,3 +288,7 @@ class HttpMixin(object):
     @property
     def project_uri(self):
         return self.project_http_uri
+
+    def _configure_gitreview_username(self):
+        # trick to set http password
+        self._run_git('config', 'gitreview.username', 'test_user:test_pass')
