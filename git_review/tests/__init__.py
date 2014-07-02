@@ -35,10 +35,10 @@ from testtools import content
 
 from git_review.tests import utils
 
-WAR_URL = 'http://gerrit-releases.storage.googleapis.com/gerrit-2.8.5.war'
+WAR_URL = 'http://gerrit-releases.storage.googleapis.com/gerrit-2.8.6.1.war'
 # Update GOLDEN_SITE_VER for every change altering golden site, including
 # WAR_URL changes. Set new value to something unique (just +1 it for example)
-GOLDEN_SITE_VER = '0'
+GOLDEN_SITE_VER = '1'
 
 
 class GerritHelpers(object):
