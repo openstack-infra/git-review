@@ -1,2 +1,2 @@
 argparse
-requests
+requests>=1.1
