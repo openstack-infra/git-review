@@ -126,6 +126,7 @@ Installation
 Install with pip install git-review
 
 For installation from source simply add git-review to your $PATH
+after installing the dependencies listed in requirements.txt
 
 Running tests
 -------------
