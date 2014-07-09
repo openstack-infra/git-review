@@ -125,6 +125,9 @@ Installation
 
 Install with pip install git-review
 
+For assistance installing pip on your os check out get-pip:
+http://pip.readthedocs.org/en/latest/installing.html
+
 For installation from source simply add git-review to your $PATH
 after installing the dependencies listed in requirements.txt
 
@@ -133,8 +136,7 @@ Running tests
 
 Running tests for git-review means running a local copy of Gerrit to
 check that git-review interacts correctly with it. This requires the
-following
-:
+following:
 
 * a Java Runtime Environment on the machine to run tests on
 
