@@ -60,6 +60,7 @@ DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
 
 _branch_name = None
 _has_color = None
+_use_color = None
 _orig_head = None
 
 
@@ -529,6 +530,29 @@ def query_reviews_over_ssh(remote_url, change=None, current_patch_set=True,
     return changes
 
 
+def set_color_output(color="auto"):
+    global _use_color
+    if check_color_support():
+        if color == "auto":
+            check_use_color_output()
+        else:
+            _use_color = color == "always"
+
+
+def check_use_color_output():
+    global _use_color
+    if _use_color is None:
+        if check_color_support():
+            # we can support color, now check if we should use it
+            stdout = "true" if sys.stdout.isatty() else "false"
+            test_command = "git config --get-colorbool color.review " + stdout
+            color = run_command(test_command)
+            _use_color = color == "true"
+        else:
+            _use_color = False
+    return _use_color
+
+
 def check_color_support():
     global _has_color
     if _has_color is None:
@@ -688,23 +712,10 @@ def get_branch_name(target_branch):
 
 
 def assert_one_change(remote, branch, yes, have_hook):
-    has_color = check_color_support()
-    if has_color:
-        color = git_config_get_value("color", "ui")
-        if color is None:
-            color = "auto"
-        else:
-            color = color.lower()
-        if (color == "" or color == "true"):
-            color = "auto"
-        elif color == "false":
-            color = "never"
-        elif color == "auto":
-            # Python is not a tty, we have to force colors
-            color = "always"
-        use_color = "--color=%s" % color
+    if check_use_color_output():
+        use_color = "--color=always"
     else:
-        use_color = ""
+        use_color = "--color=never"
     cmd = ("git log %s --decorate --oneline HEAD --not --remotes=%s" % (
            use_color, remote))
     (status, output) = run_command_status(cmd)
@@ -809,7 +820,7 @@ def list_reviews(remote):
 
     REVIEW_FIELDS = ('number', 'branch', 'subject')
     FIELDS = range(len(REVIEW_FIELDS))
-    if check_color_support():
+    if check_use_color_output():
         review_field_color = (colors.yellow, colors.green, "")
         color_reset = colors.reset
     else:
@@ -1153,6 +1164,18 @@ def _main():
     parser.add_argument("--no-custom-script", dest="custom_script",
                         action="store_false", default=True,
                         help="Do not run custom scripts.")
+    parser.add_argument("--color", dest="color", metavar="<when>",
+                        nargs="?", choices=["always", "never", "auto"],
+                        help="Show color output. --color (without [<when>]) "
+                             "is the same as --color=always. <when> can be "
+                             "one of %(choices)s. Behaviour can also be "
+                             "controlled by the color.ui and color.review "
+                             "configuration settings.")
+    parser.add_argument("--no-color", dest="color", action="store_const",
+                        const="never",
+                        help="Turn off colored output. Can be used to "
+                             "override configuration options. Same as "
+                             "setting --color=never.")
     parser.add_argument("--license", dest="license", action="store_true",
                         help="Print the license and exit")
     parser.add_argument("--version", action="version",
@@ -1196,6 +1219,9 @@ def _main():
 
     check_remote(branch, remote, config['scheme'],
                  config['hostname'], config['port'], config['project'])
+
+    if options.color:
+        set_color_output(options.color)
 
     if options.changeidentifier:
         if options.compare:

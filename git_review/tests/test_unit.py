@@ -15,18 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
+import os
+import textwrap
+
+import fixtures
+import mock
+import testtools
+
+from git_review import cmd
+from git_review.tests import utils
+
 # Use of io.StringIO in python =< 2.7 requires all strings handled to be
 # unicode. See if StringIO.StringIO is available first
 try:
     import StringIO as io
 except ImportError:
     import io
-import textwrap
-
-import mock
-import testtools
-
-from git_review import cmd
 
 
 class ConfigTestCase(testtools.TestCase):
@@ -50,7 +55,7 @@ class ConfigTestCase(testtools.TestCase):
         self.assertFalse(exists_mock.called)
 
 
-class GitReviewConsole(testtools.TestCase):
+class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
     """Class for testing the console output of git-review."""
 
     reviews = [
@@ -70,6 +75,29 @@ class GitReviewConsole(testtools.TestCase):
                        'max width is short enough'
         }]
 
+    def setUp(self):
+        super(GitReviewConsole, self).setUp()
+        # ensure all tests get a separate git dir to work in to avoid
+        # local git config from interfering
+        self.tempdir = self.useFixture(fixtures.TempDir())
+        self._run_git = functools.partial(utils.run_git,
+                                          chdir=self.tempdir.path)
+
+        self.run_cmd_patcher = mock.patch('git_review.cmd.run_command_status')
+        run_cmd_partial = functools.partial(
+            cmd.run_command_status, GIT_WORK_TREE=self.tempdir.path,
+            GIT_DIR=os.path.join(self.tempdir.path, '.git'))
+        self.run_cmd_mock = self.run_cmd_patcher.start()
+        self.run_cmd_mock.side_effect = run_cmd_partial
+
+        self._run_git('init')
+        self._run_git('commit', '--allow-empty', '-m "initial commit"')
+        self._run_git('commit', '--allow-empty', '-m "2nd commit"')
+
+    def tearDown(self):
+        self.run_cmd_patcher.stop()
+        super(GitReviewConsole, self).tearDown()
+
     @mock.patch('git_review.cmd.query_reviews')
     @mock.patch('git_review.cmd.get_remote_url', mock.MagicMock)
     @mock.patch('git_review.cmd._has_color', False)
@@ -87,3 +115,40 @@ class GitReviewConsole(testtools.TestCase):
                 self.assertEqual(line.isspace(), False,
                                  "Extra blank lines appearing between reviews"
                                  "in console output")
+
+    @mock.patch('git_review.cmd._use_color', None)
+    def test_color_output_disabled(self):
+        """Test disabling of colour output color.ui defaults to enabled
+        """
+
+        # git versions < 1.8.4 default to 'color.ui' being false
+        # so must be set to auto to correctly test
+        self._run_git("config", "color.ui", "auto")
+
+        self._run_git("config", "color.review", "never")
+        self.assertFalse(cmd.check_use_color_output(),
+                         "Failed to detect color output disabled")
+
+    @mock.patch('git_review.cmd._use_color', None)
+    def test_color_output_forced(self):
+        """Test force enable of colour output when color.ui
+        is defaulted to false
+        """
+
+        self._run_git("config", "color.ui", "never")
+
+        self._run_git("config", "color.review", "always")
+        self.assertTrue(cmd.check_use_color_output(),
+                        "Failed to detect color output forcefully "
+                        "enabled")
+
+    @mock.patch('git_review.cmd._use_color', None)
+    def test_color_output_fallback(self):
+        """Test fallback to using color.ui when color.review is not
+        set
+        """
+
+        self._run_git("config", "color.ui", "always")
+        self.assertTrue(cmd.check_use_color_output(),
+                        "Failed to use fallback to color.ui when "
+                        "color.review not present")
