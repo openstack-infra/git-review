@@ -63,7 +63,7 @@ for fetching exact patchset from the change.
 In that case local branch name will have a \-patch[patchsetNumber] suffix.
 .Pp
 The following options are available:
-.Bl \-tag \-width indent
+.Bl -tag -width indent
 .It Fl d Ar change , Fl \-download= Ns Ar change
 Download
 .Ar change
@@ -165,7 +165,7 @@ Print the version number and exit.
 This utility can be configured by adding entries to Git configuration.
 .Pp
 The following configuration keys are supported:
-.Bl \-tag
+.Bl -tag
 .It gitreview.username
 Default username used to access the repository. If not specified
 in the Git configuration, Git remote or
@@ -175,7 +175,7 @@ file, the user will be prompted to specify the username.
 Example entry in the
 .Pa .gitconfig
 file:
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 [gitreview]
 username=\fImygerrituser\fP
 .Ed
@@ -184,7 +184,7 @@ This setting determines whether changes submitted will
 be rebased to the newest state of the branch.
 .Pp
 A value of 'true' or 'false' should be specified.
-.Bl \-tag
+.Bl -tag
 .It false
 Do not rebase changes on submit \- equivalent to setting
 .Fl R
@@ -208,7 +208,7 @@ with your project, it is recommended that you create
 a file at the root of the repository named
 .Pa .gitreview
 and place information about your gerrit installation in it.  The format is similar to the Windows .ini file format:
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 [gerrit]
 host=\fIhostname\fP
 port=\fITCP port number of gerrit\fP
@@ -228,7 +228,7 @@ to zero will make
 not to rebase changes by default (same as the
 .Fl R
 command line option)
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 [gerrit]
 host=review.example.com
 port=29418
@@ -243,7 +243,7 @@ defaultrebase=0
 Normally, exit status is 0 if executed successfully.
 Exit status 1 indicates general error, sometimes more
 specific error codes are available:
-.Bl \-tag \-width 999
+.Bl -tag -width 999
 .It 2
 Gerrit
 .Ar commit\-msg
@@ -289,14 +289,14 @@ Exit status larger than 31 indicates problem with
 communication with Gerrit or remote Git repository,
 exit status larger than 63 means there was a problem with
 a local repository or a working copy.
-
+.Pp
 Exit status larger than or equal to 128 means internal
 error in running the "git" command.
 .Pp
 .Sh EXAMPLES
 To fetch a remote change number 3004:
 .Pp
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 $ git\-review \-d 3004
 Downloading refs/changes/04/3004/1 from gerrit into
 review/someone/topic_name
@@ -311,7 +311,7 @@ to name a local branch. This facilitates easier identification of changes.
 .Pp
 To fetch a remote patchset number 5 from change number 3004:
 .Pp
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 $ git\-review \-d 3004,5
 Downloading refs/changes/04/3004/5 from gerrit into
 review/someone/topic_name\-patch5
@@ -322,7 +322,7 @@ $ git branch
 .Ed
 .Pp
 To send a change for review and delete local branch afterwards:
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 $ git\-review \-f
 remote: Resolving deltas:   0% (0/8)
 To ssh://username@review.example.com/departement/project.git
@@ -344,7 +344,7 @@ port
 in the branch
 .Cm master
 :
-.Bd \-literal \-offset indent
+.Bd -literal -offset indent
 [gerrit]
 host=review.example.com
 port=29418
