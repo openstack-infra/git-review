@@ -1,6 +1,6 @@
 hacking>=0.9.2,<0.10
 discover
-
+mock
 fixtures>=0.3.14
 testrepository>=0.0.18
 testtools>=0.9.34

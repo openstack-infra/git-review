@@ -797,12 +797,16 @@ def list_reviews(remote):
         review_field_color = ("", "", "")
         color_reset = ""
     review_field_format = ["%*s", "%*s", "%*s"]
-    review_field_justify = [+1, +1, -1]  # -1 is justify to right
+    review_field_justify = [+1, +1, -1]  # +1 is justify to right
 
     review_list = [[r[f] for f in REVIEW_FIELDS] for r in reviews]
     review_field_width = dict()
-    for i in FIELDS:
+    # assume last field is longest and may exceed the console width in which
+    # case using the maximum value will result in extra blank lines appearing
+    # after each entry even when only one field exceeds the console width
+    for i in FIELDS[:-1]:
         review_field_width[i] = max(len(r[i]) for r in review_list)
+    review_field_width[len(FIELDS) - 1] = 1
 
     review_field_format = "  ".join([
         review_field_color[i] +
