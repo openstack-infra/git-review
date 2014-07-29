@@ -790,6 +790,10 @@ def list_reviews(remote):
                             exception=CannotQueryOpenChangesets,
                             parse_exc=CannotParseOpenChangesets)
 
+    if not reviews:
+        print("No pending reviews")
+        return
+
     REVIEW_FIELDS = ('number', 'branch', 'subject')
     FIELDS = range(len(REVIEW_FIELDS))
     if check_color_support():
