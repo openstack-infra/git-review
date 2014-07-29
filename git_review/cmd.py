@@ -18,16 +18,17 @@ implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
+import argparse
 import datetime
 import json
 import os
-import pkg_resources
 import re
 import shlex
 import subprocess
 import sys
 import textwrap
 
+import pkg_resources
 import requests
 
 if sys.version < '3':
@@ -40,6 +41,7 @@ if sys.version < '3':
     do_input = raw_input
 else:
     import configparser as ConfigParser
+
     import urllib.parse
     import urllib.request
     urlencode = urllib.parse.urlencode
@@ -1039,8 +1041,6 @@ def convert_bool(one_or_zero):
 
 def main():
     usage = "git review [OPTIONS] ... [BRANCH]"
-
-    import argparse
 
     class DownloadFlag(argparse.Action):
         """Additional option parsing: store value in 'dest', but
