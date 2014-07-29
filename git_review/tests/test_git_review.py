@@ -19,6 +19,7 @@ import os
 import shutil
 
 from git_review import tests
+from git_review.tests import utils
 
 
 class GitReviewTestCase(tests.BaseGitReviewTestCase):
@@ -58,6 +59,13 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self._run_git_review('-s')
         self._simple_change('test file modified', 'test commit message 2')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
+
+    def test_git_review_s_from_subdirectory(self):
+        """Test git-review -s from subdirectory."""
+        self._run_git('remote', 'rm', 'gerrit')
+        utils.run_cmd('mkdir', 'subdirectory', chdir=self.test_dir)
+        self._run_git_review(
+            '-s', chdir=os.path.join(self.test_dir, 'subdirectory'))
 
     def test_git_review_d(self):
         """Test git-review -d."""
