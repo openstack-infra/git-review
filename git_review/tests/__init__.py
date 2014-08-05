@@ -122,8 +122,8 @@ class GerritHelpers(object):
     def _run_git_review(self, *args, **kwargs):
         """Run git-review utility from source."""
         git_review = utils.run_cmd('which', 'git-review')
-        return utils.run_cmd(git_review, *args,
-                             chdir=self.test_dir, **kwargs)
+        kwargs.setdefault('chdir', self.test_dir)
+        return utils.run_cmd(git_review, *args, **kwargs)
 
 
 class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):

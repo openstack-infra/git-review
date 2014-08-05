@@ -274,7 +274,9 @@ def set_hooks_commit_msg(remote, target_file):
                 userhost = hostname
             else:
                 userhost = "%s@%s" % (username, hostname)
-            cmd = ["scp", userhost + ":hooks/commit-msg", target_file]
+            # OS independent target file
+            scp_target_file = target_file.replace(os.sep, "/")
+            cmd = ["scp", userhost + ":hooks/commit-msg", scp_target_file]
             if port is not None:
                 cmd.insert(1, "-P%s" % port)
 
