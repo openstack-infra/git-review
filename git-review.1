@@ -38,7 +38,7 @@
 .Fl s
 .Op Ar branch
 .Nm
-.Op Fl fnuvDR
+.Op Fl fnuvDRT
 .Op Fl r Ar remote
 .Op Fl t Ar topic
 .Op Ar branch
@@ -138,6 +138,8 @@ Just run the repo setup commands but don\(aqt submit anything.
 .It Fl t Ar topic , Fl \-topic= Ns Ar topic
 Sets the target topic for this change on the gerrit server.
 If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
+.It Fl T , Fl \-no\-topic
+Submit review without topic.
 .It Fl u , Fl \-update
 Skip cached local copies and force updates from network resources.
 .It Fl l , Fl \-list

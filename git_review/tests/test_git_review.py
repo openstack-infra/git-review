@@ -186,8 +186,9 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertIn('rebase', review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head)
 
-    def _assert_branch_would_be(self, branch):
-        output = self._run_git_review('-n')
+    def _assert_branch_would_be(self, branch, extra_args=None):
+        extra_args = extra_args or []
+        output = self._run_git_review('-n', *extra_args)
         # last non-empty line should be:
         #       git push gerrit HEAD:refs/publish/master
         last_line = output.strip().split('\n')[-1]
@@ -210,6 +211,11 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         finally:
             os.environ.update(LANG=lang_env)
 
+    def test_git_review_t(self):
+        self._run_git_review('-s')
+        self._simple_change('test file modified', 'commit message for bug 654')
+        self._assert_branch_would_be('master/zat', extra_args=['-t', 'zat'])
+
     def test_bug_topic(self):
         self._run_git_review('-s')
         self._simple_change('a change', 'new change for bug 123')
@@ -229,6 +235,15 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self._run_git_review('-s')
         self._simple_change('a change', 'new change not for bluepring\nasdf')
         self._assert_branch_would_be('master')
+
+    def test_git_review_T(self):
+        self._run_git_review('-s')
+        self._simple_change('test file modified', 'commit message for bug 456')
+        self._assert_branch_would_be('master/bug/456')
+        self._assert_branch_would_be('master', extra_args=['-T'])
+
+    def test_git_review_T_t(self):
+        self.assertRaises(Exception, self._run_git_review, '-T', '-t', 'taz')
 
     def test_git_review_l(self):
         self._run_git_review('-s')
