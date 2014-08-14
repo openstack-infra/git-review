@@ -331,6 +331,18 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         remote = self._run_git('remote').strip()
         self.assertEqual('remote-file', remote)
 
+    def test_config_instead_of_honored(self):
+        self._run_git('remote', 'add', 'alias', 'test_project_url')
+
+        exc = self.assertRaises(Exception, self._run_git_review,
+                                '-l', '-r', 'alias')
+        self.assertIn("'test_project_url' does not appear to be a git "
+                      "repository", exc.args[0])
+
+        self._run_git('config', '--add', 'url.%s.insteadof' % self.project_uri,
+                      'test_project_url')
+        self._run_git_review('-l', '-r', 'alias')
+
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""
