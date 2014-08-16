@@ -54,8 +54,6 @@ UPDATE = False
 CONFIGDIR = os.path.expanduser("~/.config/git-review")
 GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
-PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
-PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
                 defaultbranch='master', defaultremote="gerrit",
                 defaultrebase="1")
