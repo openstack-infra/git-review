@@ -274,16 +274,18 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
         return host, 29418, host, 8080, self._dir('gerrit', 'site-' + host)
 
-    def _create_gitreview_file(self):
+    def _create_gitreview_file(self, **kwargs):
         cfg = ('[gerrit]\n'
                'scheme=%s\n'
                'host=%s\n'
                'port=%s\n'
-               'project=test/test_project.git')
+               'project=test/test_project.git\n'
+               '%s')
         parsed = urlparse(self.project_uri)
         host_port = parsed.netloc.rpartition('@')[-1]
         host, __, port = host_port.partition(':')
-        cfg %= parsed.scheme, host, port
+        extra = '\n'.join('%s=%s' % kv for kv in kwargs.items())
+        cfg %= parsed.scheme, host, port, extra
         utils.write_to_file(self._dir('test', '.gitreview'), cfg.encode())
 
 

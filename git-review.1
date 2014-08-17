@@ -181,6 +181,24 @@ file:
 [gitreview]
 username=\fImygerrituser\fP
 .Ed
+.It gitreview.scheme
+This setting determines the default scheme (ssh/http/https) of gerrit remote
+.Ed
+.It gitreview.host
+This setting determines the default hostname of gerrit remote
+.Ed
+.It gitreview.port
+This setting determines the default port of gerrit remote
+.Ed
+.It gitreview.project
+This setting determines the default name of gerrit git repo
+.Ed
+.It gitreview.remote
+This setting determines the default name to use for gerrit remote
+.Ed
+.It gitreview.branch
+This setting determines the default branch
+.Ed
 .It gitreview.rebase
 This setting determines whether changes submitted will
 be rebased to the newest state of the branch.
@@ -232,6 +250,7 @@ not to rebase changes by default (same as the
 command line option)
 .Bd -literal -offset indent
 [gerrit]
+scheme=ssh
 host=review.example.com
 port=29418
 project=department/project.git
@@ -239,6 +258,9 @@ defaultbranch=master
 defaultremote=review
 defaultrebase=0
 .Ed
+.Pp
+When the same option is provided through FILES and CONFIGURATION, the
+CONFIGURATION value wins.
 .Pp
 .Sh DIAGNOSTICS
 .Pp
