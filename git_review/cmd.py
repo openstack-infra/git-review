@@ -1043,7 +1043,7 @@ def convert_bool(one_or_zero):
     return one_or_zero in ["1", "true", "True"]
 
 
-def main():
+def _main():
     usage = "git review [OPTIONS] ... [BRANCH]"
 
     class DownloadFlag(argparse.Action):
@@ -1262,9 +1262,9 @@ def main():
     sys.exit(status)
 
 
-if __name__ == "__main__":
+def main():
     try:
-        main()
+        _main()
     except GitReviewException as e:
         # If one does unguarded print(e) here, in certain locales the implicit
         # str(e) blows up with familiar "UnicodeEncodeError ... ordinal not in
@@ -1277,3 +1277,7 @@ if __name__ == "__main__":
         else:
             print(u.encode('utf-8'))
         sys.exit(e.EXIT_CODE)
+
+
+if __name__ == "__main__":
+    main()
