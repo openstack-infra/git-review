@@ -152,3 +152,41 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
         self.assertTrue(cmd.check_use_color_output(),
                         "Failed to use fallback to color.ui when "
                         "color.review not present")
+
+
+class FakeResponse(object):
+
+    def __init__(self, code, text=""):
+        self.status_code = code
+        self.text = text
+
+
+class FakeException(Exception):
+
+    def __init__(self, code, *args, **kwargs):
+        super(FakeException, self).__init__(*args, **kwargs)
+        self.code = code
+
+
+class GitReviewUnitTest(testtools.TestCase):
+    """Class for misc unit tests."""
+
+    @mock.patch('requests.get', return_value=FakeResponse(404))
+    def test_run_http_exc_raise_http_error(self, mock_get):
+        url = 'http://gerrit.example.com'
+        try:
+            cmd.run_http_exc(FakeException, url)
+            self.fails('Exception expected')
+        except FakeException as err:
+            self.assertEqual(cmd.http_code_2_return_code(404), err.code)
+            mock_get.assert_called_once_with(url)
+
+    @mock.patch('requests.get', side_effect=Exception())
+    def test_run_http_exc_raise_unknown_error(self, mock_get):
+        url = 'http://gerrit.example.com'
+        try:
+            cmd.run_http_exc(FakeException, url)
+            self.fails('Exception expected')
+        except FakeException as err:
+            self.assertEqual(255, err.code)
+            mock_get.assert_called_once_with(url)

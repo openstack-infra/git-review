@@ -321,6 +321,10 @@ or code.  This exit status will also be returned if the patchset is already
 applied to the current branch.
 .It 70
 Cannot determine top level Git directory or .git subdirectory path.
+.It 101
+Unauthorized (401) http request done by git-review.
+.It 104
+Not Found (404) http request done by git-review.
 .El
 .Pp
 Exit status larger than 31 indicates problem with

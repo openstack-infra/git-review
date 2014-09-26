@@ -154,6 +154,11 @@ def run_command_exc(klazz, *argv, **env):
     return output
 
 
+def http_code_2_return_code(code):
+    """Tranform http status code to system return code."""
+    return (code - 301) % 255 + 1
+
+
 def run_http_exc(klazz, url, **env):
     """Run http GET request url, on failure raise klazz
 
@@ -168,12 +173,12 @@ def run_http_exc(klazz, url, **env):
 
     try:
         res = requests.get(url, **env)
-        if not 200 <= res.status_code < 300:
-            code = (res.status_code - 301) % 255 + 1
-            raise klazz(code, res.text, ('GET', url), env)
-        return res
     except Exception as err:
         raise klazz(255, str(err), ('GET', url), env)
+    if not 200 <= res.status_code < 300:
+        raise klazz(http_code_2_return_code(res.status_code),
+                    res.text, ('GET', url), env)
+    return res
 
 
 def get_version():
