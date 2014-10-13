@@ -1056,8 +1056,13 @@ def _main():
 
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
 
-    parser.add_argument("-t", "--topic", dest="topic",
-                        help="Topic to submit branch to")
+    topic_arg_group = parser.add_mutually_exclusive_group()
+    topic_arg_group.add_argument("-t", "--topic", dest="topic",
+                                 help="Topic to submit branch to")
+    topic_arg_group.add_argument("-T", "--no-topic", dest="notopic",
+                                 action="store_true",
+                                 help="No topic except if explicitly provided")
+
     parser.add_argument("-D", "--draft", dest="draft", action="store_true",
                         help="Submit review as a draft")
     parser.add_argument("-c", "--compatible", dest="compatible",
@@ -1233,8 +1238,11 @@ def _main():
         ref = "for"
 
     cmd = "git push %s HEAD:refs/%s/%s" % (remote, ref, branch)
-    topic = options.topic or get_topic(branch)
-    if topic != branch:
+    if options.topic is not None:
+        topic = options.topic
+    else:
+        topic = None if options.notopic else get_topic(branch)
+    if topic and topic != branch:
         cmd += "/%s" % topic
     if options.regenerate:
         print("Amending the commit to regenerate the change id\n")
