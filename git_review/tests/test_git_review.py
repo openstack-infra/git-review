@@ -260,6 +260,33 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertNotIn('project: change3, abandoned', result)
         self.assertNotIn('project2:', result)
 
+    def _test_git_review_F(self, rebase):
+        self._run_git_review('-s')
+
+        # Populate repo
+        self._simple_change('create file', 'test commit message')
+        change1 = self._run_git('rev-parse', 'HEAD')
+        self._run_git_review()
+        self._run_gerrit_cli('review', change1, '--code-review=+2', '--submit')
+        self._run_git('reset', '--hard', 'HEAD^')
+
+        # Review with force_rebase
+        self._run_git('config', 'gitreview.rebase', rebase)
+        self._simple_change('create file2', 'test commit message 2',
+                            self._dir('test', 'test_file2.txt'))
+        self._run_git_review('-F')
+        head_1 = self._run_git('rev-parse', 'HEAD^')
+        self.assertEqual(change1, head_1)
+
+    def test_git_review_F(self):
+        self._test_git_review_F('1')
+
+    def test_git_review_F_norebase(self):
+        self._test_git_review_F('0')
+
+    def test_git_review_F_R(self):
+        self.assertRaises(Exception, self._run_git_review, '-F', '-R')
+
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""

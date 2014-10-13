@@ -1072,12 +1072,14 @@ def _main():
                         help="Regenerate Change-id before submitting")
     parser.add_argument("-r", "--remote", dest="remote",
                         help="git remote to use for gerrit")
-    parser.add_argument("-R", "--no-rebase", dest="rebase",
-                        action="store_false",
-                        help="Don't rebase changes before submitting.")
-    parser.add_argument("-F", "--force-rebase", dest="force_rebase",
-                        action="store_true",
-                        help="Force rebase even when not needed.")
+
+    rebase_group = parser.add_mutually_exclusive_group()
+    rebase_group.add_argument("-R", "--no-rebase", dest="rebase",
+                              action="store_false",
+                              help="Don't rebase changes before submitting.")
+    rebase_group.add_argument("-F", "--force-rebase", dest="force_rebase",
+                              action="store_true",
+                              help="Force rebase even when not needed.")
 
     fetch = parser.add_mutually_exclusive_group()
     fetch.set_defaults(download=False, compare=False, cherrypickcommit=False,
@@ -1214,7 +1216,7 @@ def _main():
             finish_branch(branch)
         return
 
-    if options.rebase:
+    if options.rebase or options.force_rebase:
         if not rebase_changes(branch, remote):
             sys.exit(1)
         if not options.force_rebase and not undo_rebase():
