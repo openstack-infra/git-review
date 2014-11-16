@@ -26,7 +26,28 @@ import textwrap
 import mock
 import testtools
 
-import git_review
+from git_review import cmd
+
+
+class ConfigTestCase(testtools.TestCase):
+    """Class testing config behavior."""
+
+    @mock.patch('git_review.cmd.LOCAL_MODE',
+                mock.PropertyMock(return_value=True))
+    @mock.patch('git_review.cmd.git_directories', return_value=['', 'fake'])
+    @mock.patch('git_review.cmd.run_command_exc')
+    def test_git_local_mode(self, run_mock, dir_mock):
+        cmd.git_config_get_value('abc', 'def')
+        run_mock.assert_called_once_with(
+            cmd.GitConfigException,
+            'git', 'config', '-f', 'fake/config', '--get', 'abc.def')
+
+    @mock.patch('git_review.cmd.LOCAL_MODE',
+                mock.PropertyMock(return_value=True))
+    @mock.patch('os.path.exists', return_value=False)
+    def test_gitreview_local_mode(self, exists_mock):
+        cmd.get_config()
+        self.assertFalse(exists_mock.called)
 
 
 class GitReviewConsole(testtools.TestCase):
@@ -56,7 +77,7 @@ class GitReviewConsole(testtools.TestCase):
 
         mock_query.return_value = self.reviews
         with mock.patch('sys.stdout', new_callable=io.StringIO) as output:
-            git_review.cmd.list_reviews(None)
+            cmd.list_reviews(None)
             console_output = output.getvalue().split('\n')
 
         wrapper = textwrap.TextWrapper(replace_whitespace=False,

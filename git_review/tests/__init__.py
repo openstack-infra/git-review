@@ -145,6 +145,10 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self.useFixture(fixtures.Timeout(2 * 60, True))
         BaseGitReviewTestCase._test_counter += 1
 
+        # ensures git-review command runs in local mode (for functional tests)
+        self.useFixture(
+            fixtures.EnvironmentVariable('GITREVIEW_LOCAL_MODE', ''))
+
         self.init_dirs()
         ssh_addr, ssh_port, http_addr, http_port, self.site_dir = \
             self._pick_gerrit_port_and_dir()

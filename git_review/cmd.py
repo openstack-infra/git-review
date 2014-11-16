@@ -51,6 +51,7 @@ else:
 
 VERBOSE = False
 UPDATE = False
+LOCAL_MODE = 'GITREVIEW_LOCAL_MODE' in os.environ
 CONFIGDIR = os.path.expanduser("~/.config/git-review")
 GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
@@ -228,6 +229,9 @@ def git_config_get_value(section, option, default=None, as_bool=False):
     cmd = ["git", "config", "--get", "%s.%s" % (section, option)]
     if as_bool:
         cmd.insert(2, "--bool")
+    if LOCAL_MODE:
+        __, git_dir = git_directories()
+        cmd[2:2] = ['-f', os.path.join(git_dir, 'config')]
     try:
         return run_command_exc(GitConfigException, *cmd).strip()
     except GitConfigException as exc:
@@ -522,8 +526,11 @@ def get_config(config_file=None):
     with the narrowest scope wins.
     """
     config = DEFAULTS.copy()
-    for filename in (GLOBAL_CONFIG, USER_CONFIG, config_file):
-        if filename is not None and os.path.exists(filename):
+    filenames = [] if LOCAL_MODE else [GLOBAL_CONFIG, USER_CONFIG]
+    if config_file:
+        filenames.append(config_file)
+    for filename in filenames:
+        if os.path.exists(filename):
             config.update(load_config_file(filename))
     return config
 
