@@ -56,7 +56,7 @@ control system.
 can be
 .Ar changeNumber
 as obtained using
-.Fl \-\-list
+.Fl \-list
 option, or it can be 
 .Ar changeNumber,patchsetNumber
 for fetching exact patchset from the change.
@@ -327,7 +327,7 @@ To send a change for review and delete local branch afterwards:
 .Bd -literal -offset indent
 $ git\-review \-f
 remote: Resolving deltas:   0% (0/8)
-To ssh://username@review.example.com/departement/project.git
+To ssh://username@review.example.com/department/project.git
  * [new branch]      HEAD \-> refs/for/master/topic_name
 Switched to branch 'master'
 Deleted branch 'review/someone/topic_name'
