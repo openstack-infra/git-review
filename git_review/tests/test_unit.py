@@ -46,7 +46,7 @@ class ConfigTestCase(testtools.TestCase):
                 mock.PropertyMock(return_value=True))
     @mock.patch('os.path.exists', return_value=False)
     def test_gitreview_local_mode(self, exists_mock):
-        cmd.get_config()
+        cmd.Config()
         self.assertFalse(exists_mock.called)
 
 

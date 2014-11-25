@@ -302,6 +302,35 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_git_review_F_R(self):
         self.assertRaises(Exception, self._run_git_review, '-F', '-R')
 
+    def test_get_config_from_cli(self):
+        self._run_git('remote', 'rm', 'origin')
+        self._run_git('remote', 'rm', 'gerrit')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
+        self._run_git_review('-s', '-r', 'remote-cli')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-cli', remote)
+
+    def test_get_config_from_gitconfig(self):
+        self._run_git('remote', 'rm', 'origin')
+        self._run_git('remote', 'rm', 'gerrit')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
+        self._run_git_review('-s')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-gitconfig', remote)
+
+    def test_get_config_from_file(self):
+        self._run_git('remote', 'rm', 'origin')
+        self._run_git('remote', 'rm', 'gerrit')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git_review('-s')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-file', remote)
+
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""

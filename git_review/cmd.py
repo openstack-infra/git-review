@@ -56,8 +56,7 @@ CONFIGDIR = os.path.expanduser("~/.config/git-review")
 GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
 DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
-                defaultbranch='master', defaultremote="gerrit",
-                defaultrebase="1")
+                branch='master', remote="gerrit", rebase="1")
 
 _branch_name = None
 _has_color = None
@@ -238,6 +237,29 @@ def git_config_get_value(section, option, default=None, as_bool=False):
         if exc.rc == 1:
             return default
         raise
+
+
+class Config(object):
+    """Expose as dictionary configuration options."""
+
+    def __init__(self, config_file=None):
+        self.config = DEFAULTS.copy()
+        filenames = [] if LOCAL_MODE else [GLOBAL_CONFIG, USER_CONFIG]
+        if config_file:
+            filenames.append(config_file)
+        for filename in filenames:
+            if os.path.exists(filename):
+                if filename != config_file:
+                    msg = ("Using global/system git-review config files (%s) "
+                           "is deprecated")
+                    print(msg % filename)
+                self.config.update(load_config_file(filename))
+
+    def __getitem__(self, key):
+        value = git_config_get_value('gitreview', key)
+        if value is None:
+            value = self.config[key]
+        return value
 
 
 class GitConfigException(CommandFailed):
@@ -519,22 +541,6 @@ def check_color_support():
     return _has_color
 
 
-def get_config(config_file=None):
-    """Generate the configuration map by starting with some built-in defaults
-    and then loading GLOBAL_CONFIG, USER_CONFIG, and a repository-specific
-    .gitreview file, if they exist. In case of conflict, the configuration file
-    with the narrowest scope wins.
-    """
-    config = DEFAULTS.copy()
-    filenames = [] if LOCAL_MODE else [GLOBAL_CONFIG, USER_CONFIG]
-    if config_file:
-        filenames.append(config_file)
-    for filename in filenames:
-        if os.path.exists(filename):
-            config.update(load_config_file(filename))
-    return config
-
-
 def load_config_file(config_file):
     """Load configuration options from a file."""
     configParser = ConfigParser.ConfigParser()
@@ -544,9 +550,9 @@ def load_config_file(config_file):
         'hostname': 'host',
         'port': 'port',
         'project': 'project',
-        'defaultbranch': 'defaultbranch',
-        'defaultremote': 'defaultremote',
-        'defaultrebase': 'defaultrebase',
+        'branch': 'defaultbranch',
+        'remote': 'defaultremote',
+        'rebase': 'defaultrebase',
     }
     config = {}
     for config_key, option_name in options.items():
@@ -1047,7 +1053,7 @@ def finish_branch(target_branch):
 
 def convert_bool(one_or_zero):
     "Return a bool on a one or zero string."
-    return one_or_zero in ["1", "true", "True"]
+    return str(one_or_zero) in ["1", "true", "True"]
 
 
 def _main():
@@ -1167,13 +1173,10 @@ def _main():
         pass
     else:
         no_git_dir = False
-        config = get_config(os.path.join(top_dir, ".gitreview"))
-        defaultrebase = convert_bool(
-            git_config_get_value("gitreview", "rebase",
-                                 default=str(config['defaultrebase'])))
-        parser.set_defaults(rebase=defaultrebase,
-                            branch=config['defaultbranch'],
-                            remote=config['defaultremote'])
+        config = Config(os.path.join(top_dir, ".gitreview"))
+        parser.set_defaults(branch=config['branch'],
+                            rebase=convert_bool(config['rebase']),
+                            remote=config['remote'])
     options = parser.parse_args()
     if no_git_dir:
         raise no_git_dir
