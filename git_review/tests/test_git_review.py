@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import shutil
 
@@ -127,6 +128,37 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                             'test commit message 4')
         review_res = self._run_git_review('-y')
         self.assertIn("Processing changes: new: 2", review_res)
+
+    def test_git_review_re(self):
+        """Test git-review adding reviewers to changes."""
+        self._run_git_review('-s')
+
+        # Create users to add as reviewers
+        self._run_gerrit_cli('create-account', '--email',
+                             'reviewer1@example.com', 'reviewer1')
+        self._run_gerrit_cli('create-account', '--email',
+                             'reviewer2@example.com', 'reviewer2')
+
+        self._simple_change('test file', 'test commit message')
+
+        review_res = self._run_git_review('--reviewers', 'reviewer1',
+                                          'reviewer2')
+        self.assertIn("Processing changes: new: 1", review_res)
+
+        # verify both reviewers are on patch set
+        head = self._run_git('rev-parse', 'HEAD')
+        change = self._run_gerrit_cli('query', '--format=JSON',
+                                      '--all-reviewers', head)
+        # The first result should be the one we want
+        change = json.loads(change.split('\n')[0])
+
+        self.assertEqual(2, len(change['allReviewers']))
+
+        reviewers = set()
+        for reviewer in change['allReviewers']:
+            reviewers.add(reviewer['username'])
+
+        self.assertEqual(set(['reviewer1', 'reviewer2']), reviewers)
 
     def test_rebase_no_remote_branch_msg(self):
         """Test message displayed where no remote branch exists."""
