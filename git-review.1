@@ -221,6 +221,20 @@ in the
 .Pa .gitreview
 file.
 .El
+.Bl -tag
+.It color.review
+Whether to use ANSI escape sequences to add color to the output displayed by
+this command. Default value is determined by color.ui.
+.Bl -tag
+.It auto or true
+If you want output to use color when written to the terminal (default with Git
+1.8.4 and newer).
+.It always
+If you want all output to use color
+.It never or false
+If you wish not to use color for any output. (default with Git older than 1.8.4)
+.El
+.El
 .Sh FILES
 To use
 .Nm

@@ -54,9 +54,9 @@ def run_cmd(*args, **kwargs):
     return out.strip()
 
 
-def run_git(command, *args):
+def run_git(command, *args, **kwargs):
     """Run git command with the specified args."""
-    return run_cmd("git", command, *args)
+    return run_cmd("git", command, *args, **kwargs)
 
 
 def write_to_file(path, content):
