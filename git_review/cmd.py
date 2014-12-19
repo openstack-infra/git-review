@@ -359,7 +359,8 @@ def add_remote(scheme, hostname, port, project, remote):
         remote_url = make_remote_url(scheme, username, hostname, port, project)
         print("Trying again with %s" % remote_url)
         if not test_remote_url(remote_url):
-            raise Exception("Could not connect to gerrit at %s" % remote_url)
+            raise GitReviewException("Could not connect to gerrit at "
+                                     "%s" % remote_url)
         asked_for_username = True
 
     print("Creating a git remote called \"%s\" that maps to:" % remote)
@@ -368,7 +369,7 @@ def add_remote(scheme, hostname, port, project, remote):
     (status, remote_output) = run_command_status(cmd)
 
     if status != 0:
-        raise Exception("Error running %s" % cmd)
+        raise CommandFailed(status, remote_output, cmd, {})
 
     if asked_for_username:
         print()
