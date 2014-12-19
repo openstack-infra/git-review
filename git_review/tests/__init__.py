@@ -171,7 +171,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
                              '--name', 'test/test_project')
 
         # ensure user proxy conf doesn't interfere with tests
-        os.environ['NO_PROXY'] = '*'
+        os.environ['no_proxy'] = os.environ['NO_PROXY'] = '*'
 
         # prepare repository for the testing
         self._run_git('clone', self.project_uri)
