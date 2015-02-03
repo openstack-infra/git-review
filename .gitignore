@@ -11,3 +11,4 @@ ChangeLog
 *.egg
 *.egg-info
 *.pyc
+doc/build
