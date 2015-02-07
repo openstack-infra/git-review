@@ -62,6 +62,7 @@ _branch_name = None
 _has_color = None
 _use_color = None
 _orig_head = None
+_rewrites = None
 
 
 class colors:
@@ -385,9 +386,60 @@ def add_remote(scheme, hostname, port, project, remote):
         print()
 
 
+def populate_rewrites():
+    """Populate the global _rewrites map based on the output of "git-config".
+    """
+
+    cmd = ['git', 'config', '--list']
+    out = run_command_exc(CommandFailed, *cmd).strip()
+
+    global _rewrites
+    _rewrites = {}
+
+    for entry in out.splitlines():
+        key, _, value = entry.partition('=')
+        key = key.lower()
+
+        if key.startswith('url.') and key.endswith('.insteadof'):
+            rewrite = key[4:-10]
+            if rewrite:
+                _rewrites[value] = rewrite
+
+
+def alias_url(url):
+    """Expand a remote URL. Use the global map _rewrites to replace the
+    longest match with its equivalent.
+    """
+
+    if _rewrites is None:
+        populate_rewrites()
+
+    longest = None
+    for alias in _rewrites:
+        if (url.startswith(alias)
+                and (longest is None or len(longest) < len(alias))):
+            longest = alias
+
+    if longest:
+        url = url.replace(longest, _rewrites[longest])
+    return url
+
+
 def get_remote_url(remote):
+    """Retrieve the remote URL. Read the configuration to expand the URL of a
+    remote repository taking into account any "url.<base>.insteadOf" config
+    setting.
+
+    TODO: Replace current code with "git ls-remote --get-url" when the
+    continuous builders will support it. It requires the use of Git v1.7.5
+    or above. Beware that option "--get-url" of "git-ls-remote" is
+    supported since v1.7.5 (see https://github.com/git/git/commit/45781ad) but
+    was not properly documented until v1.7.12.2.
+    """
+
     url = git_config_get_value('remote.%s' % remote, 'url', '')
     push_url = git_config_get_value('remote.%s' % remote, 'pushurl', url)
+    push_url = alias_url(push_url)
     if VERBOSE:
         print("Found origin Push URL:", push_url)
     return push_url
