@@ -176,6 +176,48 @@ password=pass
 """
 
 
+class ResolveTrackingUnitTest(testtools.TestCase):
+    """Class for testing resolve_tracking."""
+    def setUp(self):
+        testtools.TestCase.setUp(self)
+        patcher = mock.patch('git_review.cmd.run_command_exc')
+        self.addCleanup(patcher.stop)
+        self.run_command_exc = patcher.start()
+
+    def test_track_local_branch(self):
+        'Test that local tracked branch is not followed.'
+        self.run_command_exc.side_effect = [
+            '',
+            'refs/heads/other/branch',
+        ]
+        self.assertEqual(cmd.resolve_tracking(u'remote', u'rbranch'),
+                         (u'remote', u'rbranch'))
+
+    def test_track_untracked_branch(self):
+        'Test that local untracked branch is not followed.'
+        self.run_command_exc.side_effect = [
+            '',
+            '',
+        ]
+        self.assertEqual(cmd.resolve_tracking(u'remote', u'rbranch'),
+                         (u'remote', u'rbranch'))
+
+    def test_track_remote_branch(self):
+        'Test that remote tracked branch is followed.'
+        self.run_command_exc.side_effect = [
+            '',
+            'refs/remotes/other/branch',
+        ]
+        self.assertEqual(cmd.resolve_tracking(u'remote', u'rbranch'),
+                         (u'other', u'branch'))
+
+    def test_track_git_error(self):
+        'Test that local tracked branch is not followed.'
+        self.run_command_exc.side_effect = [cmd.CommandFailed(1, '', [], {})]
+        self.assertRaises(cmd.CommandFailed,
+                          cmd.resolve_tracking, u'remote', u'rbranch')
+
+
 class GitReviewUnitTest(testtools.TestCase):
     """Class for misc unit tests."""
 
@@ -236,3 +278,19 @@ class GitReviewUnitTest(testtools.TestCase):
                                          stdin='url=%s' % url)
         calls = [mock.call(url), mock.call(url, auth=('user', 'pass'))]
         mock_get.assert_has_calls(calls)
+
+    @mock.patch('sys.argv', ['argv0', '--track', 'branch'])
+    @mock.patch('git_review.cmd.check_remote')
+    @mock.patch('git_review.cmd.resolve_tracking')
+    def test_command_line_no_track(self, resolve_tracking, check_remote):
+        check_remote.side_effect = Exception()
+        self.assertRaises(Exception, cmd._main)
+        self.assertFalse(resolve_tracking.called)
+
+    @mock.patch('sys.argv', ['argv0', '--track'])
+    @mock.patch('git_review.cmd.check_remote')
+    @mock.patch('git_review.cmd.resolve_tracking')
+    def test_track(self, resolve_tracking, check_remote):
+        check_remote.side_effect = Exception()
+        self.assertRaises(Exception, cmd._main)
+        self.assertTrue(resolve_tracking.called)

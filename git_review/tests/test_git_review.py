@@ -90,6 +90,12 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertNotIn('test commit message',
                          self._run_git('show', 'HEAD^1'))
 
+        # and branch is tracking
+        head = self._run_git('symbolic-ref', '-q', 'HEAD')
+        self.assertIn(
+            'refs/remotes/gerrit/master',
+            self._run_git("for-each-ref", "--format='%(upstream)'", head))
+
     def test_multiple_changes(self):
         """Test git-review asks about multiple changes.
 
@@ -159,6 +165,73 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self.assertIn("Running: git rebase -p -i remotes/gerrit/master",
                       review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head_1)
+
+    def test_uploads_with_nondefault_rebase(self):
+        """Test changes rebase against correct branches."""
+        # prepare maintenance branch that is behind master
+        self._create_gitreview_file(track='true',
+                                    defaultremote='origin')
+        self._run_git('add', '.gitreview')
+        self._run_git('commit', '-m', 'track=true.')
+        self._simple_change('diverge master from maint',
+                            'no conflict',
+                            self._dir('test', 'test_file_to_diverge.txt'))
+        self._run_git('push', 'origin', 'master')
+        self._run_git('push', 'origin', 'master', 'master:other')
+        self._run_git_review('-s')
+        head_1 = self._run_git('rev-parse', 'HEAD^1')
+        self._run_gerrit_cli('create-branch',
+                             'test/test_project',
+                             'maint', head_1)
+        self._run_git('fetch')
+
+        br_out = self._run_git('checkout',
+                               '-b', 'test_branch', 'origin/maint')
+        expected_track = 'Branch test_branch set up to track remote' + \
+                         ' branch maint from origin.'
+        self.assertIn(expected_track, br_out)
+        branches = self._run_git('branch', '-a')
+        expected_branch = '* test_branch'
+        observed = branches.split('\n')
+        self.assertIn(expected_branch, observed)
+
+        self._simple_change('some new message',
+                            'just another file (no conflict)',
+                            self._dir('test', 'new_tracked_test_file.txt'))
+        change_id = self._run_git('log', '-1').split()[-1]
+
+        review_res = self._run_git_review('-v')
+        # no rebase needed; if it breaks it would try to rebase to master
+        self.assertNotIn("Running: git rebase -p -i remotes/origin/master",
+                         review_res)
+        # Don't need to query gerrit for the branch as the second half
+        # of this test will work only if the branch was correctly
+        # stored in gerrit
+
+        # delete branch locally
+        self._run_git('checkout', 'master')
+        self._run_git('branch', '-D', 'test_branch')
+
+        # download, amend, submit
+        self._run_git_review('-d', change_id)
+        self._simple_amend('just another file (no conflict)',
+                           self._dir('test', 'new_tracked_test_file_2.txt'))
+        new_change_id = self._run_git('log', '-1').split()[-1]
+        self.assertEqual(change_id, new_change_id)
+        review_res = self._run_git_review('-v')
+        # caused the right thing to happen
+        self.assertIn("Running: git rebase -p -i remotes/origin/maint",
+                      review_res)
+
+        # track different branch than expected in changeset
+        branch = self._run_git('rev-parse', '--abbrev-ref', 'HEAD')
+        self._run_git('branch',
+                      '--set-upstream',
+                      branch,
+                      'remotes/origin/other')
+        self.assertRaises(
+            Exception,  # cmd.BranchTrackingMismatch inside
+            self._run_git_review, '-d', change_id)
 
     def test_no_rebase_check(self):
         """Test -R causes a change to be uploaded without rebase checking."""
