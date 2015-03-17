@@ -60,6 +60,11 @@ defaultremote (default: gerrit).
 * You can specify different values to be used as defaults in
   ~/.config/git-review/git-review.conf or /etc/git-review/git-review.conf.
 
+* Git-review will query git credential system for gerrit user/password when
+  authentication failed over http(s). Unlike git, git-review does not persist
+  gerrit user/password in git credential system for security purposes and git
+  credential system configuration stays under user responsibility.
+
 Hooks
 =====
 

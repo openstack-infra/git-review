@@ -235,6 +235,13 @@ If you want all output to use color
 If you wish not to use color for any output. (default with Git older than 1.8.4)
 .El
 .El
+.Pp
+.Nm
+will query git credential system for gerrit user/password when
+authentication failed over http(s). Unlike git,
+.Nm
+does not persist gerrit user/password in git credential system for security
+purposes and git credential system configuration stays under user responsibility.
 .Sh FILES
 To use
 .Nm

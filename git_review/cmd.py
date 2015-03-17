@@ -121,7 +121,7 @@ def build_review_number(review, patchset):
     return review
 
 
-def run_command_status(*argv, **env):
+def run_command_status(*argv, **kwargs):
     if VERBOSE:
         print(datetime.datetime.now(), "Running:", " ".join(argv))
     if len(argv) == 1:
@@ -130,17 +130,21 @@ def run_command_status(*argv, **env):
             argv = shlex.split(argv[0].encode('utf-8'))
         else:
             argv = shlex.split(str(argv[0]))
+    stdin = kwargs.pop('stdin', None)
     newenv = os.environ.copy()
-    newenv.update(env)
-    p = subprocess.Popen(argv, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, env=newenv)
-    (out, nothing) = p.communicate()
+    newenv.update(kwargs)
+    p = subprocess.Popen(argv,
+                         stdin=subprocess.PIPE if stdin else None,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         env=newenv)
+    (out, nothing) = p.communicate(stdin)
     out = out.decode('utf-8', 'replace')
     return (p.returncode, out.strip())
 
 
-def run_command(*argv, **env):
-    (rc, output) = run_command_status(*argv, **env)
+def run_command(*argv, **kwargs):
+    (rc, output) = run_command_status(*argv, **kwargs)
     return output
 
 
@@ -153,6 +157,15 @@ def run_command_exc(klazz, *argv, **env):
     if rc != 0:
         raise klazz(rc, output, argv, env)
     return output
+
+
+def git_credentials(klazz, url):
+    """Get credentials using git credential."""
+    cmd = 'git', 'credential', 'fill'
+    stdin = 'url=%s' % url
+    out = run_command_exc(klazz, *cmd, stdin=stdin)
+    data = dict(l.split('=', 1) for l in out.splitlines())
+    return data['username'], data['password']
 
 
 def http_code_2_return_code(code):
@@ -174,6 +187,11 @@ def run_http_exc(klazz, url, **env):
 
     try:
         res = requests.get(url, **env)
+        if res.status_code == 401:
+            env['auth'] = git_credentials(klazz, url)
+            res = requests.get(url, **env)
+    except klazz:
+        raise
     except Exception as err:
         raise klazz(255, str(err), ('GET', url), env)
     if not 200 <= res.status_code < 300:
