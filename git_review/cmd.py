@@ -932,7 +932,7 @@ def list_reviews(remote):
         #  ((width1, value1), (width2, value2), ...) map.
         formatted_fields = []
         for (width, value) in zip(review_field_width, review_value):
-            formatted_fields.extend([width, value])
+            formatted_fields.extend([width, value.encode('utf-8')])
         print(review_field_format % tuple(formatted_fields))
     print("Found %d items for review" % len(reviews))
 
