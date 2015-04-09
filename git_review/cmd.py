@@ -331,7 +331,7 @@ def set_hooks_commit_msg(remote, target_file):
 
             if VERBOSE:
                 hook_url = 'scp://%s%s/hooks/commit-msg' \
-                    % (userhost, (":%s" % port) if port else "")
+                           % (userhost, (":%s" % port) if port else "")
                 print("Fetching commit hook from: %s" % hook_url)
             run_command_exc(CannotInstallHook, *cmd)
 
@@ -341,15 +341,16 @@ def set_hooks_commit_msg(remote, target_file):
 
 def test_remote_url(remote_url):
     """Tests that a possible gerrit remote url works."""
-    status, __ = run_command_status("git", "push", "--dry-run", remote_url,
-                                    "--all")
+    status, description = run_command_status("git", "push", "--dry-run",
+                                             remote_url, "--all")
     if status != 128:
         if VERBOSE:
-            print("%s worked." % remote_url)
+            print("%s worked. Description: %s" % (remote_url, description))
         return True
     else:
         if VERBOSE:
-            print("%s did not work." % remote_url)
+            print("%s did not work. Description: %s" % (
+                remote_url, description))
         return False
 
 
