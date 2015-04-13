@@ -56,7 +56,8 @@ CONFIGDIR = os.path.expanduser("~/.config/git-review")
 GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
 DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
-                branch='master', remote="gerrit", rebase="1")
+                branch='master', remote="gerrit", rebase="1",
+                track="0")
 
 _branch_name = None
 _has_color = None
@@ -654,6 +655,7 @@ def load_config_file(config_file):
         'branch': 'defaultbranch',
         'remote': 'defaultremote',
         'rebase': 'defaultrebase',
+        'track': 'track',
     }
     config = {}
     for config_key, option_name in options.items():
@@ -673,6 +675,39 @@ def update_remote(remote):
             print(output)
         return False
     return True
+
+
+def parse_tracking(ref=None):
+    """Return tracked (remote, branch) of current HEAD or other named
+       branch if tracking remote.
+    """
+    if ref is None:
+        ref = run_command_exc(
+            SymbolicRefFailed,
+            "git", "symbolic-ref", "-q", "HEAD")
+    tracked = run_command_exc(
+        ForEachRefFailed,
+        "git", "for-each-ref", "--format=%(upstream)", ref)
+
+    # Only on explicitly tracked remote branch do we diverge from default
+    if tracked and tracked.startswith('refs/remotes/'):
+        return tracked[13:].partition('/')[::2]
+
+    return None, None
+
+
+def resolve_tracking(remote, branch):
+    """Resolve tracked upstream remote/branch if current branch is tracked."""
+    tracked_remote, tracked_branch = parse_tracking()
+    # tracked_branch will be empty when tracking a local branch
+    if tracked_branch:
+        if VERBOSE:
+            print('Following tracked %s/%s rather than default %s/%s' % (
+                  tracked_remote, tracked_branch,
+                  remote, branch))
+        return tracked_remote, tracked_branch
+
+    return remote, branch
 
 
 def check_remote(branch, remote, scheme, hostname, port, project):
@@ -983,6 +1018,26 @@ class ResetHardFailed(CommandFailed):
     EXIT_CODE = 66
 
 
+class SetUpstreamBranchFailed(CommandFailed):
+    "Cannot set upstream to remote branch"
+    EXIT_CODE = 67
+
+
+class SymbolicRefFailed(CommandFailed):
+    "Cannot find symbolic reference"
+    EXIT_CODE = 68
+
+
+class ForEachRefFailed(CommandFailed):
+    "Cannot process symbolic reference"
+    EXIT_CODE = 69
+
+
+class BranchTrackingMismatch(GitReviewException):
+    "Branch exists but is tracking unexpected branch"
+    EXIT_CODE = 70
+
+
 def fetch_review(review, masterbranch, remote):
     remote_url = get_remote_url(remote)
 
@@ -1021,6 +1076,7 @@ def fetch_review(review, masterbranch, remote):
         author = re.sub('\W+', '_', review_info['owner']['name']).lower()
     except KeyError:
         author = 'unknown'
+    remote_branch = review_info['branch']
 
     if patchset_number is None:
         branch_name = "review/%s/%s" % (author, topic)
@@ -1030,10 +1086,10 @@ def fetch_review(review, masterbranch, remote):
     print("Downloading %s from gerrit" % refspec)
     run_command_exc(PatchSetGitFetchFailed,
                     "git", "fetch", remote, refspec)
-    return branch_name
+    return branch_name, remote_branch
 
 
-def checkout_review(branch_name):
+def checkout_review(branch_name, remote, remote_branch):
     """Checkout a newly fetched (FETCH_HEAD) change
        into a branch
     """
@@ -1042,10 +1098,24 @@ def checkout_review(branch_name):
         run_command_exc(CheckoutNewBranchFailed,
                         "git", "checkout", "-b",
                         branch_name, "FETCH_HEAD")
+        # --set-upstream-to is not supported in git 1.7
+        run_command_exc(SetUpstreamBranchFailed,
+                        "git", "branch", "--set-upstream",
+                        branch_name,
+                        '%s/%s' % (remote, remote_branch))
 
     except CheckoutNewBranchFailed as e:
         if re.search("already exists\.?", e.output):
-            print("Branch already exists - reusing")
+            print("Branch %s already exists - reusing" % branch_name)
+            track_remote, track_branch = parse_tracking(
+                ref='refs/heads/' + branch_name)
+            if track_remote and not (track_remote == remote and
+                                     track_branch == remote_branch):
+                print("Branch %s incorrectly tracking %s/%s instead of %s/%s"
+                      % (branch_name,
+                         track_remote, track_branch,
+                         remote, remote_branch))
+                raise BranchTrackingMismatch
             run_command_exc(CheckoutExistingBranchFailed,
                             "git", "checkout", branch_name)
             run_command_exc(ResetHardFailed,
@@ -1102,8 +1172,8 @@ def compare_review(review_spec, branch, remote, rebase=False):
     old_review = build_review_number(review, old_ps)
     new_review = build_review_number(review, new_ps)
 
-    old_branch = fetch_review(old_review, branch, remote)
-    checkout_review(old_branch)
+    old_branch, _ = fetch_review(old_review, branch, remote)
+    checkout_review(old_branch, None, None)
 
     if rebase:
         print('Rebasing %s' % old_branch)
@@ -1112,8 +1182,8 @@ def compare_review(review_spec, branch, remote, rebase=False):
             print('Skipping rebase because of conflicts')
             run_command_exc(CommandFailed, 'git', 'rebase', '--abort')
 
-    new_branch = fetch_review(new_review, branch, remote)
-    checkout_review(new_branch)
+    new_branch, remote_branch = fetch_review(new_review, branch, remote)
+    checkout_review(new_branch, remote, remote_branch)
 
     if rebase:
         print('Rebasing also %s' % new_branch)
@@ -1186,6 +1256,14 @@ def _main():
     rebase_group.add_argument("-F", "--force-rebase", dest="force_rebase",
                               action="store_true",
                               help="Force rebase even when not needed.")
+
+    track_group = parser.add_mutually_exclusive_group()
+    track_group.add_argument("--track", dest="track",
+                             action="store_true",
+                             help="Use tracked branch as default.")
+    track_group.add_argument("--no-track", dest="track",
+                             action="store_false",
+                             help="Ignore tracked branch.")
 
     fetch = parser.add_mutually_exclusive_group()
     fetch.set_defaults(download=False, compare=False, cherrypickcommit=False,
@@ -1274,8 +1352,8 @@ def _main():
     else:
         no_git_dir = False
         config = Config(os.path.join(top_dir, ".gitreview"))
-        parser.set_defaults(branch=config['branch'],
-                            rebase=convert_bool(config['rebase']),
+        parser.set_defaults(rebase=convert_bool(config['rebase']),
+                            track=convert_bool(config['track']),
                             remote=config['remote'])
     options = parser.parse_args()
     if no_git_dir:
@@ -1285,7 +1363,13 @@ def _main():
         print(COPYRIGHT)
         sys.exit(0)
 
-    branch = options.branch
+    if options.branch is None:
+        branch = config['branch']
+    else:
+        # explicitly-specified branch on command line overrides options.track
+        branch = options.branch
+        options.track = False
+
     global VERBOSE
     global UPDATE
     VERBOSE = options.verbose
@@ -1293,6 +1377,9 @@ def _main():
     remote = options.remote
     yes = options.yes
     status = 0
+
+    if options.track:
+        remote, branch = resolve_tracking(remote, branch)
 
     check_remote(branch, remote, config['scheme'],
                  config['hostname'], config['port'], config['project'])
@@ -1305,9 +1392,10 @@ def _main():
             compare_review(options.changeidentifier,
                            branch, remote, options.rebase)
             return
-        local_branch = fetch_review(options.changeidentifier, branch, remote)
+        local_branch, remote_branch = fetch_review(options.changeidentifier,
+                                                   branch, remote)
         if options.download:
-            checkout_review(local_branch)
+            checkout_review(local_branch, remote, remote_branch)
         else:
             if options.cherrypickcommit:
                 cherrypick_review()

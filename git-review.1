@@ -160,6 +160,18 @@ When submitting a change for review, you will usually want it to be based on the
 Also can be used for
 .Fl \-compare
 to skip automatic rebase of fetched reviews.
+.It Fl \-track
+Choose the branch to submit the change against (and, if
+rebasing, to rebase against) from the branch being tracked
+(if a branch is being tracked), and set the tracking branch
+when downloading a change to point to the remote and branch
+against which patches should be submitted.
+See gitreview.track configuration.
+.It Fl \-no\-track
+Ignore any branch being tracked by the current branch,
+overriding gitreview.track.
+This option is implied by providing a specific branch name
+on the command line.
 .It Fl \-version
 Print the version number and exit.
 .El
@@ -198,6 +210,37 @@ This setting determines the default name to use for gerrit remote
 .Ed
 .It gitreview.branch
 This setting determines the default branch
+.Ed
+.It gitreview.track
+Determines whether to prefer the currently-tracked branch (if any)
+and the branch against which the changeset was submitted to Gerrit
+(if there is exactly one such branch) to the defaultremote and
+defaultbranch for submitting and rebasing against.
+If the local topic branch is tracking a remote branch, the remote
+and branch that the local topic branch is tracking should be used
+for submit and rebase operations, rather than the defaultremote
+and defaultbranch.
+.Pp
+When downloading a patch, creates the local branch to track the
+appropriate remote and branch in order to choose that branch by
+default when submitting modifications to that changeset.
+.Pp
+A value of 'true' or 'false' should be specified.
+.Bl -tag
+.It true
+Do prefer the currently-tracked branch (if any) \- equivalent
+to setting
+.Fl \-track
+when submitting changes.
+.It false
+Ignore tracking branches \- equivalent to setting
+.Fl \-no\-track
+(the default) or providing an explicit branch name when submitting
+changes. This is the default value unless overridden by
+.Pa .gitreview
+file, and is implied by providing a specific branch name on the
+command line.
+.El
 .Ed
 .It gitreview.rebase
 This setting determines whether changes submitted will
@@ -278,6 +321,7 @@ project=department/project.git
 defaultbranch=master
 defaultremote=review
 defaultrebase=0
+track=0
 .Ed
 .Pp
 When the same option is provided through FILES and CONFIGURATION, the

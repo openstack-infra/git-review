@@ -239,6 +239,16 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('add', file_)
         self._run_git('commit', '-m', commit_message)
 
+    def _simple_amend(self, change_text, file_=None):
+        """Helper method to amend existing commit with change."""
+        if file_ is None:
+            file_ = self._dir('test', 'test_file_new.txt')
+        utils.write_to_file(file_, change_text.encode())
+        self._run_git('add', file_)
+        # cannot use --no-edit because it does not exist in older git
+        message = self._run_git('log', '-1', '--format=%s\n\n%b')
+        self._run_git('commit', '--amend', '-m', message)
+
     def _configure_ssh(self, ssh_addr, ssh_port):
         """Setup ssh and scp to run with special options."""
 
