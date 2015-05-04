@@ -811,16 +811,10 @@ def get_branch_name(target_branch):
     global _branch_name
     if _branch_name is not None:
         return _branch_name
-    _branch_name = None
-    cmd = "git branch"
-    has_color = check_color_support()
-    if has_color:
-        cmd += " --color=never"
-    for branch in run_command(cmd).split("\n"):
-        if branch.startswith('*'):
-            _branch_name = branch.split()[1].strip()
-            break
-    if _branch_name == "(no" or _branch_name == "(detached":
+    cmd = "git rev-parse --symbolic-full-name --abbrev-ref HEAD"
+    _branch_name = run_command(cmd)
+    if _branch_name == "HEAD":
+        # detached head or no branch found
         _branch_name = target_branch
     return _branch_name
 
