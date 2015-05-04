@@ -133,6 +133,8 @@ def run_command_status(*argv, **kwargs):
             argv = shlex.split(str(argv[0]))
     stdin = kwargs.pop('stdin', None)
     newenv = os.environ.copy()
+    newenv['LANG'] = 'C'
+    newenv['LANGUAGE'] = 'C'
     newenv.update(kwargs)
     p = subprocess.Popen(argv,
                          stdin=subprocess.PIPE if stdin else None,
@@ -814,7 +816,7 @@ def get_branch_name(target_branch):
     has_color = check_color_support()
     if has_color:
         cmd += " --color=never"
-    for branch in run_command(cmd, LANG='C').split("\n"):
+    for branch in run_command(cmd).split("\n"):
         if branch.startswith('*'):
             _branch_name = branch.split()[1].strip()
             break
