@@ -21,15 +21,14 @@ import sys
 if sys.version < '3':
     import urllib
     import urlparse
-    urlopen = urllib.urlopen
     urlparse = urlparse.urlparse
 else:
     import urllib.parse
     import urllib.request
-    urlopen = urllib.request.urlopen
     urlparse = urllib.parse.urlparse
 
 import fixtures
+import requests
 import testtools
 from testtools import content
 
@@ -60,8 +59,10 @@ class GerritHelpers(object):
 
         if not os.path.exists(self.gerrit_war):
             print("Downloading Gerrit binary from %s..." % WAR_URL)
-            resp = urlopen(WAR_URL)
-            utils.write_to_file(self.gerrit_war, resp.read())
+            resp = requests.get(WAR_URL)
+            if resp.status_code != 200:
+                raise RuntimeError("Problem requesting Gerrit war")
+            utils.write_to_file(self.gerrit_war, resp.content)
             print("Saved to %s" % self.gerrit_war)
 
     def init_gerrit(self):
