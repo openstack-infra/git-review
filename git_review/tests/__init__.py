@@ -173,6 +173,18 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         # ensure user proxy conf doesn't interfere with tests
         os.environ['no_proxy'] = os.environ['NO_PROXY'] = '*'
 
+        # isolate tests from user and system git configuration
+        self.home_dir = self._dir('site', 'tmp', 'home')
+        self.xdg_config_dir = self._dir('home', '.xdgconfig')
+        os.environ['HOME'] = self.home_dir
+        os.environ['XDG_CONFIG_HOME'] = self.xdg_config_dir
+        os.environ['GIT_CONFIG_NOSYSTEM'] = "1"
+        if not os.path.exists(self.home_dir):
+            os.mkdir(self.home_dir)
+        if not os.path.exists(self.xdg_config_dir):
+            os.mkdir(self.xdg_config_dir)
+        self.addCleanup(shutil.rmtree, self.home_dir)
+
         # prepare repository for the testing
         self._run_git('clone', self.project_uri)
         utils.write_to_file(self._dir('test', 'test_file.txt'),
