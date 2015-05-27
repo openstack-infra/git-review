@@ -789,6 +789,13 @@ def rebase_changes(branch, remote, interactive=True):
         print("Errors running %s" % cmd)
         if interactive:
             print(output)
+            print("It is likely that your change has a merge conflict. "
+                  "You may resolve it in the working tree now as "
+                  "described above and then run 'git review' again, or "
+                  "if you do not want to resolve it yet (note that the "
+                  "change can not merge until the conflict is resolved) "
+                  "you may run 'git rebase --abort' then 'git review -R' "
+                  "to upload the change without rebasing.")
         return False
     return True
 
