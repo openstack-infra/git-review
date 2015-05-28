@@ -149,6 +149,8 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         exc = self.assertRaises(Exception, self._run_git_review)
         self.assertIn("Errors running git rebase -p -i remotes/gerrit/master",
                       exc.args[0])
+        self.assertIn("It is likely that your change has a merge conflict.",
+                      exc.args[0])
 
     def test_upload_without_rebase(self):
         """Test change not needing a rebase can upload without rebasing."""
