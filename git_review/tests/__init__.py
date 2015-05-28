@@ -131,6 +131,7 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
     """Base class for the git-review tests."""
 
     _test_counter = 0
+    _remote = 'gerrit'
 
     @property
     def project_uri(self):
@@ -201,11 +202,17 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
         # go to the just cloned test Git repository
         self._run_git('clone', self.project_uri)
-        self._run_git('remote', 'add', 'gerrit', self.project_uri)
+        self.configure_gerrit_remote()
         self.addCleanup(shutil.rmtree, self.test_dir)
 
         # ensure user is configured for all tests
         self._configure_gitreview_username()
+
+    def set_remote(self, uri):
+        self._run_git('remote', 'set-url', self._remote, uri)
+
+    def reset_remote(self):
+        self._run_git('remote', 'rm', self._remote)
 
     def attach_on_exception(self, filename):
         @self.addOnException
@@ -289,6 +296,9 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
 
         os.environ['PATH'] = self.ssh_dir + os.pathsep + os.environ['PATH']
         os.environ['GIT_SSH'] = self._dir('ssh', 'ssh')
+
+    def configure_gerrit_remote(self):
+        self._run_git('remote', 'add', self._remote, self.project_uri)
 
     def _configure_gitreview_username(self):
         self._run_git('config', 'gitreview.username', 'test_user')

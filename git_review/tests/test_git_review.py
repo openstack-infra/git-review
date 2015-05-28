@@ -23,6 +23,39 @@ from git_review import tests
 from git_review.tests import utils
 
 
+class ConfigTestCase(tests.BaseGitReviewTestCase):
+    """Class for config tests."""
+
+    def test_get_config_from_cli(self):
+        self.reset_remote()
+        self._run_git('remote', 'rm', 'origin')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
+        self._run_git_review('-s', '-r', 'remote-cli')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-cli', remote)
+
+    def test_get_config_from_gitconfig(self):
+        self.reset_remote()
+        self._run_git('remote', 'rm', 'origin')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
+        self._run_git_review('-s')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-gitconfig', remote)
+
+    def test_get_config_from_file(self):
+        self.reset_remote()
+        self._run_git('remote', 'rm', 'origin')
+        self._create_gitreview_file(defaultremote='remote-file')
+        self._run_git_review('-s')
+
+        remote = self._run_git('remote').strip()
+        self.assertEqual('remote-file', remote)
+
+
 class GitReviewTestCase(tests.BaseGitReviewTestCase):
     """Class for the git-review tests."""
 
@@ -35,14 +68,14 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
     def test_git_review_s(self):
         """Test git-review -s."""
-        self._run_git('remote', 'rm', 'gerrit')
+        self.reset_remote()
         self._run_git_review('-s')
         self._simple_change('test file modified', 'test commit message')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
 
     def test_git_review_s_in_detached_head(self):
         """Test git-review -s in detached HEAD state."""
-        self._run_git('remote', 'rm', 'gerrit')
+        self.reset_remote()
         master_sha1 = self._run_git('rev-parse', 'master')
         self._run_git('checkout', master_sha1)
         self._run_git_review('-s')
@@ -56,14 +89,14 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self._run_git('reset', '--hard', 'HEAD^')
 
         # Review setup with an outdated repo
-        self._run_git('remote', 'rm', 'gerrit')
+        self.reset_remote()
         self._run_git_review('-s')
         self._simple_change('test file modified', 'test commit message 2')
         self.assertIn('Change-Id:', self._run_git('log', '-1'))
 
     def test_git_review_s_from_subdirectory(self):
         """Test git-review -s from subdirectory."""
-        self._run_git('remote', 'rm', 'gerrit')
+        self.reset_remote()
         utils.run_cmd('mkdir', 'subdirectory', chdir=self.test_dir)
         self._run_git_review(
             '-s', chdir=os.path.join(self.test_dir, 'subdirectory'))
@@ -81,7 +114,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
         # download clean Git repository and fresh change from Gerrit to it
         self._run_git('clone', self.project_uri)
-        self._run_git('remote', 'add', 'gerrit', self.project_uri)
+        self.configure_gerrit_remote()
         self._run_git_review('-d', change_id)
         self.assertIn('test commit message', self._run_git('log', '-1'))
 
@@ -94,7 +127,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         # and branch is tracking
         head = self._run_git('symbolic-ref', '-q', 'HEAD')
         self.assertIn(
-            'refs/remotes/gerrit/master',
+            'refs/remotes/%s/master' % self._remote,
             self._run_git("for-each-ref", "--format='%(upstream)'", head))
 
     def test_multiple_changes(self):
@@ -164,9 +197,11 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         """Test message displayed where no remote branch exists."""
         self._run_git_review('-s')
         self._run_git('checkout', '-b', 'new_branch')
+        self._simple_change('simple message',
+                            'need to avoid noop message')
         exc = self.assertRaises(Exception, self._run_git_review, 'new_branch')
         self.assertIn("The branch 'new_branch' does not exist on the given "
-                      "remote 'gerrit'", exc.args[0])
+                      "remote '%s'" % self._remote, exc.args[0])
 
     def test_need_rebase_no_upload(self):
         """Test change needing a rebase does not upload."""
@@ -179,8 +214,9 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                             'create conflict with master')
 
         exc = self.assertRaises(Exception, self._run_git_review)
-        self.assertIn("Errors running git rebase -p -i remotes/gerrit/master",
-                      exc.args[0])
+        self.assertIn(
+            "Errors running git rebase -p -i remotes/%s/master" % self._remote,
+            exc.args[0])
         self.assertIn("It is likely that your change has a merge conflict.",
                       exc.args[0])
 
@@ -196,8 +232,9 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                             self._dir('test', 'new_test_file.txt'))
 
         review_res = self._run_git_review('-v')
-        self.assertIn("Running: git rebase -p -i remotes/gerrit/master",
-                      review_res)
+        self.assertIn(
+            "Running: git rebase -p -i remotes/%s/master" % self._remote,
+            review_res)
         self.assertEqual(self._run_git('rev-parse', 'HEAD^1'), head_1)
 
     def test_uploads_with_nondefault_rebase(self):
@@ -473,53 +510,43 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_git_review_F_R(self):
         self.assertRaises(Exception, self._run_git_review, '-F', '-R')
 
-    def test_get_config_from_cli(self):
-        self._run_git('remote', 'rm', 'origin')
-        self._run_git('remote', 'rm', 'gerrit')
-        self._create_gitreview_file(defaultremote='remote-file')
-        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
-        self._run_git_review('-s', '-r', 'remote-cli')
-
-        remote = self._run_git('remote').strip()
-        self.assertEqual('remote-cli', remote)
-
-    def test_get_config_from_gitconfig(self):
-        self._run_git('remote', 'rm', 'origin')
-        self._run_git('remote', 'rm', 'gerrit')
-        self._create_gitreview_file(defaultremote='remote-file')
-        self._run_git('config', 'gitreview.remote', 'remote-gitconfig')
-        self._run_git_review('-s')
-
-        remote = self._run_git('remote').strip()
-        self.assertEqual('remote-gitconfig', remote)
-
-    def test_get_config_from_file(self):
-        self._run_git('remote', 'rm', 'origin')
-        self._run_git('remote', 'rm', 'gerrit')
-        self._create_gitreview_file(defaultremote='remote-file')
-        self._run_git_review('-s')
-
-        remote = self._run_git('remote').strip()
-        self.assertEqual('remote-file', remote)
-
     def test_config_instead_of_honored(self):
-        self._run_git('remote', 'add', 'alias', 'test_project_url')
+        self.set_remote('test_project_url')
 
-        exc = self.assertRaises(Exception, self._run_git_review,
-                                '-l', '-r', 'alias')
-        self.assertIn("'test_project_url' does not appear to be a git "
-                      "repository", exc.args[0])
+        self.assertRaises(Exception, self._run_git_review, '-l')
 
         self._run_git('config', '--add', 'url.%s.insteadof' % self.project_uri,
                       'test_project_url')
-        self._run_git_review('-l', '-r', 'alias')
+        self._run_git_review('-l')
 
-        self._run_git('config', '--unset',
-                      'url.%s.insteadof' % self.project_uri)
+    def test_config_pushinsteadof_honored(self):
+        self.set_remote('test_project_url')
+
+        self.assertRaises(Exception, self._run_git_review, '-l')
+
         self._run_git('config', '--add',
                       'url.%s.pushinsteadof' % self.project_uri,
                       'test_project_url')
-        self._run_git_review('-l', '-r', 'alias')
+        self._run_git_review('-l')
+
+
+class PushUrlTestCase(GitReviewTestCase):
+    """Class for the git-review tests using origin push-url."""
+
+    _remote = 'origin'
+
+    def set_remote(self, uri):
+        self._run_git('remote', 'set-url', '--push', self._remote, uri)
+
+    def reset_remote(self):
+        self._run_git('config', '--unset', 'remote.%s.pushurl' % self._remote)
+
+    def configure_gerrit_remote(self):
+        self.set_remote(self.project_uri)
+        self._run_git('config', 'gitreview.usepushurl', '1')
+
+    def test_config_pushinsteadof_honored(self):
+        self.skipTest("pushinsteadof doesn't rewrite pushurls")
 
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):

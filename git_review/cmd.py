@@ -57,7 +57,7 @@ GLOBAL_CONFIG = "/etc/git-review/git-review.conf"
 USER_CONFIG = os.path.join(CONFIGDIR, "git-review.conf")
 DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
                 branch='master', remote="gerrit", rebase="1",
-                track="0")
+                track="0", usepushurl="0")
 
 _branch_name = None
 _has_color = None
@@ -369,7 +369,7 @@ def make_remote_url(scheme, username, hostname, port, project):
         return "%s://%s@%s/%s" % (scheme, username, hostport, project)
 
 
-def add_remote(scheme, hostname, port, project, remote):
+def add_remote(scheme, hostname, port, project, remote, usepushurl):
     """Adds a gerrit remote."""
     asked_for_username = False
 
@@ -392,11 +392,15 @@ def add_remote(scheme, hostname, port, project, remote):
                                      "%s" % remote_url)
         asked_for_username = True
 
-    print("Creating a git remote called \"%s\" that maps to:" % remote)
+    if usepushurl:
+        cmd = "git remote set-url --push %s %s" % (remote, remote_url)
+        print("Adding a git push url to '%s' that maps to:" % remote)
+    else:
+        cmd = "git remote add -f %s %s" % (remote, remote_url)
+        print("Creating a git remote called '%s' that maps to:" % remote)
     print("\t%s" % remote_url)
-    cmd = "git remote add -f %s %s" % (remote, remote_url)
-    (status, remote_output) = run_command_status(cmd)
 
+    (status, remote_output) = run_command_status(cmd)
     if status != 0:
         raise CommandFailed(status, remote_output, cmd, {})
 
@@ -678,6 +682,7 @@ def load_config_file(config_file):
         'remote': 'defaultremote',
         'rebase': 'defaultrebase',
         'track': 'track',
+        'usepushurl': 'usepushurl',
     }
     config = {}
     for config_key, option_name in options.items():
@@ -732,42 +737,58 @@ def resolve_tracking(remote, branch):
     return remote, branch
 
 
-def check_remote(branch, remote, scheme, hostname, port, project):
+def check_remote(branch, remote, scheme, hostname, port, project,
+                 usepushurl=False):
     """Check that a Gerrit Git remote repo exists, if not, set one."""
 
-    has_color = check_color_support()
-    if has_color:
-        color_never = "--color=never"
+    if usepushurl:
+        push_url = git_config_get_value('remote.%s' % remote, 'pushurl', None)
+        if push_url:
+            return
     else:
-        color_never = ""
+        has_color = check_color_support()
+        if has_color:
+            color_never = "--color=never"
+        else:
+            color_never = ""
 
-    if remote in run_command("git remote").split("\n"):
+        if remote in run_command("git remote").split("\n"):
 
-        remotes = run_command("git branch -a %s" % color_never).split("\n")
-        for current_remote in remotes:
-            if (current_remote.strip() == "remotes/%s/%s" % (remote, branch)
-                    and not UPDATE):
-                return
-        # We have the remote, but aren't set up to fetch. Fix it
-        if VERBOSE:
-            print("Setting up gerrit branch tracking for better rebasing")
-        update_remote(remote)
-        return
+            remotes = run_command("git branch -a %s" % color_never).split("\n")
+            for current_remote in remotes:
+                remote_string = "remotes/%s/%s" % (remote, branch)
+                if (current_remote.strip() == remote_string and not UPDATE):
+                    return
+            # We have the remote, but aren't set up to fetch. Fix it
+            if VERBOSE:
+                print("Setting up gerrit branch tracking for better rebasing")
+            update_remote(remote)
+            return
 
     if hostname is False or project is False:
         # This means there was no .gitreview file
         printwrap("No '.gitreview' file found in this repository. We don't "
-                  "know where your gerrit is. Please manually create a remote "
-                  "named \"%s\" and try again." % remote)
+                  "know where your gerrit is.")
+        if usepushurl:
+            printwrap("Please set the push-url on your origin remote to the "
+                      "location of your gerrit server and try again")
+        else:
+            printwrap("Please manually create a remote "
+                      "named \"%s\" and try again." % remote)
         sys.exit(1)
 
     # Gerrit remote not present, try to add it
     try:
-        add_remote(scheme, hostname, port, project, remote)
+        add_remote(scheme, hostname, port, project, remote, usepushurl)
     except Exception:
         print(sys.exc_info()[2])
-        printwrap("We don't know where your gerrit is. Please manually create "
-                  "a remote named \"%s\" and try again." % remote)
+        if usepushurl:
+            printwrap("We don't know where your gerrit is. Please manually"
+                      " add a push-url to the '%s' remote and try again."
+                      % remote)
+        else:
+            printwrap("We don't know where your gerrit is. Please manually"
+                      " create a remote named '%s' and try again." % remote)
         raise
 
 
@@ -1294,6 +1315,10 @@ def _main():
                         help="Regenerate Change-id before submitting")
     parser.add_argument("-r", "--remote", dest="remote",
                         help="git remote to use for gerrit")
+    parser.add_argument("--use-pushurl", dest="usepushurl",
+                        action="store_true",
+                        help="Use remote push-url logic instead of separate"
+                             " remotes")
 
     rebase_group = parser.add_mutually_exclusive_group()
     rebase_group.add_argument("-R", "--no-rebase", dest="rebase",
@@ -1400,7 +1425,8 @@ def _main():
         config = Config(os.path.join(top_dir, ".gitreview"))
         parser.set_defaults(rebase=convert_bool(config['rebase']),
                             track=convert_bool(config['track']),
-                            remote=config['remote'])
+                            remote=None,
+                            usepushurl=convert_bool(config['usepushurl']))
     options = parser.parse_args()
     if no_git_dir:
         raise no_git_dir
@@ -1421,6 +1447,11 @@ def _main():
     VERBOSE = options.verbose
     UPDATE = options.update
     remote = options.remote
+    if not remote:
+        if options.usepushurl:
+            remote = 'origin'
+        else:
+            remote = config['remote']
     yes = options.yes
     status = 0
 
@@ -1428,7 +1459,8 @@ def _main():
         remote, branch = resolve_tracking(remote, branch)
 
     check_remote(branch, remote, config['scheme'],
-                 config['hostname'], config['port'], config['project'])
+                 config['hostname'], config['port'], config['project'],
+                 usepushurl=options.usepushurl)
 
     if options.color:
         set_color_output(options.color)
