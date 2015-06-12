@@ -46,6 +46,10 @@ If you want to compare patchset 4 with patchset 10 of change 781 from gerrit::
 
     git review -m 781,4-10
 
+If you want to see a list of open reviews::
+
+    git review -l
+
 If you just want to do the commit message and remote setup steps::
 
     git review -s
