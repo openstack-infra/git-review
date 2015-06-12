@@ -1237,6 +1237,20 @@ def convert_bool(one_or_zero):
     return str(one_or_zero) in ["1", "true", "True"]
 
 
+class MalformedInput(GitReviewException):
+    EXIT_CODE = 3
+
+
+def assert_valid_reviewers(reviewers):
+    """Ensure no whitespace is found in reviewer names, as it will result
+    in an invalid refspec.
+    """
+    for reviewer in reviewers:
+        if re.search(r'\s', reviewer):
+            raise MalformedInput(
+                "Whitespace not allowed in reviewer: '%s'" % reviewer)
+
+
 def _main():
     usage = "git review [OPTIONS] ... [BRANCH]"
 
@@ -1257,6 +1271,8 @@ def _main():
                                  action="store_true",
                                  help="No topic except if explicitly provided")
 
+    parser.add_argument("--reviewers", nargs="+",
+                        help="Add reviewers to uploaded patch sets.")
     parser.add_argument("-D", "--draft", dest="draft", action="store_true",
                         help="Submit review as a draft")
     parser.add_argument("-c", "--compatible", dest="compatible",
@@ -1468,6 +1484,11 @@ def _main():
         topic = None if options.notopic else get_topic(branch)
     if topic and topic != branch:
         cmd += "/%s" % topic
+
+    if options.reviewers:
+        assert_valid_reviewers(options.reviewers)
+        cmd += "%" + ",".join("r=%s" % r for r in options.reviewers)
+
     if options.regenerate:
         print("Amending the commit to regenerate the change id\n")
         regenerate_cmd = "git commit --amend"

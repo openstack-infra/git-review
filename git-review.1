@@ -41,6 +41,7 @@
 .Op Fl fnuvDRT
 .Op Fl r Ar remote
 .Op Fl t Ar topic
+.Op Fl \-reviewers Ar reviewer ...
 .Op Ar branch
 .Nm
 .Fl \-version
@@ -140,6 +141,8 @@ Sets the target topic for this change on the gerrit server.
 If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
 .It Fl T , Fl \-no\-topic
 Submit review without topic.
+.It Fl \-reviewers Ar reviewer ...
+Subscribe one or more reviewers to the uploaded patch sets.  Reviewers should be identifiable by Gerrit (usually use their Gerrit username or email address).
 .It Fl u , Fl \-update
 Skip cached local copies and force updates from network resources.
 .It Fl l , Fl \-list
@@ -337,6 +340,8 @@ specific error codes are available:
 Gerrit
 .Ar commit\-msg
 hook could not be successfully installed.
+.It 3
+Could not parse malformed argument value or user input.
 .It 32
 Cannot fetch list of open changesets from Gerrit.
 .It 33
