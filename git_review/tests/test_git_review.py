@@ -418,6 +418,13 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                       'test_project_url')
         self._run_git_review('-l', '-r', 'alias')
 
+        self._run_git('config', '--unset',
+                      'url.%s.insteadof' % self.project_uri)
+        self._run_git('config', '--add',
+                      'url.%s.pushinsteadof' % self.project_uri,
+                      'test_project_url')
+        self._run_git_review('-l', '-r', 'alias')
+
 
 class HttpGitReviewTestCase(tests.HttpMixin, GitReviewTestCase):
     """Class for the git-review tests over HTTP(S)."""

@@ -64,6 +64,7 @@ _has_color = None
 _use_color = None
 _orig_head = None
 _rewrites = None
+_rewrites_push = None
 
 
 class colors:
@@ -409,59 +410,78 @@ def add_remote(scheme, hostname, port, project, remote):
 
 
 def populate_rewrites():
-    """Populate the global _rewrites map based on the output of "git-config".
+    """Populate the global _rewrites and _rewrites_push maps based on the
+    output of "git-config".
     """
 
     cmd = ['git', 'config', '--list']
     out = run_command_exc(CommandFailed, *cmd).strip()
 
-    global _rewrites
+    global _rewrites, _rewrites_push
     _rewrites = {}
+    _rewrites_push = {}
 
     for entry in out.splitlines():
         key, _, value = entry.partition('=')
         key = key.lower()
 
         if key.startswith('url.') and key.endswith('.insteadof'):
-            rewrite = key[4:-10]
+            rewrite = key[len('url.'):-len('.insteadof')]
             if rewrite:
                 _rewrites[value] = rewrite
+        elif key.startswith('url.') and key.endswith('.pushinsteadof'):
+            rewrite = key[len('url.'):-len('.pushinsteadof')]
+            if rewrite:
+                _rewrites_push[value] = rewrite
 
 
-def alias_url(url):
+def alias_url(url, rewrite_push):
     """Expand a remote URL. Use the global map _rewrites to replace the
-    longest match with its equivalent.
+    longest match with its equivalent. If rewrite_push is True, try
+    _rewrites_push before _rewrites.
     """
 
     if _rewrites is None:
         populate_rewrites()
 
-    longest = None
-    for alias in _rewrites:
-        if (url.startswith(alias)
-                and (longest is None or len(longest) < len(alias))):
-            longest = alias
+    if rewrite_push:
+        maps = [_rewrites_push, _rewrites]
+    else:
+        maps = [_rewrites]
 
-    if longest:
-        url = url.replace(longest, _rewrites[longest])
+    for rewrites in maps:
+        # If Git finds a pushInsteadOf alias, it uses that even if
+        # there is a longer insteadOf alias.
+        longest = None
+        for alias in rewrites:
+            if (url.startswith(alias)
+                    and (longest is None or len(longest) < len(alias))):
+                longest = alias
+
+        if longest:
+            return url.replace(longest, rewrites[longest])
+
     return url
 
 
 def get_remote_url(remote):
     """Retrieve the remote URL. Read the configuration to expand the URL of a
-    remote repository taking into account any "url.<base>.insteadOf" config
-    setting.
+    remote repository taking into account any "url.<base>.insteadOf" or
+    "url.<base>.pushInsteadOf" config setting.
 
-    TODO: Replace current code with "git ls-remote --get-url" when the
-    continuous builders will support it. It requires the use of Git v1.7.5
-    or above. Beware that option "--get-url" of "git-ls-remote" is
-    supported since v1.7.5 (see https://github.com/git/git/commit/45781ad) but
-    was not properly documented until v1.7.12.2.
+    TODO: Replace current code with something like "git ls-remote
+    --get-url" after Git grows a version of it that returns the push
+    URL rather than the fetch URL.
     """
 
-    url = git_config_get_value('remote.%s' % remote, 'url', '')
-    push_url = git_config_get_value('remote.%s' % remote, 'pushurl', url)
-    push_url = alias_url(push_url)
+    push_url = git_config_get_value('remote.%s' % remote, 'pushurl')
+    if push_url is not None:
+        # Git rewrites pushurl using insteadOf but not pushInsteadOf.
+        push_url = alias_url(push_url, False)
+    else:
+        url = git_config_get_value('remote.%s' % remote, 'url')
+        # Git rewrites url using pushInsteadOf or insteadOf.
+        push_url = alias_url(url, True)
     if VERBOSE:
         print("Found origin Push URL:", push_url)
     return push_url
