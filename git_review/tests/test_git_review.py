@@ -118,7 +118,20 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         self._run_git_review('-d', change_id)
         self.assertIn('test commit message', self._run_git('log', '-1'))
 
-        # second download should also work correct
+        # test backport branch
+        self._run_git('checkout', '-b', 'mybackport',
+                      self._remote + '/' + 'testbranch')
+        self._simple_change('test file modified in branch',
+                            'test branch commit message\n\nChange-Id: %s' %
+                            change_id)
+        self._run_git_review('testbranch')
+        self._run_git('checkout', 'master')
+        self._run_git_review('-d', change_id, 'testbranch')
+        self.assertIn('test branch commit message',
+                      self._run_git('log', '-1'))
+
+        # second download should also work correctly
+        self._run_git('checkout', 'master')
         self._run_git_review('-d', change_id)
         self.assertIn('test commit message', self._run_git('show', 'HEAD'))
         self.assertNotIn('test commit message',

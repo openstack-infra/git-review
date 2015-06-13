@@ -198,6 +198,15 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('add', '--all')
         self._run_git('commit', '-m', 'Test file and .gitreview added.')
         self._run_git('push', 'origin', 'master')
+        # push a branch to gerrit
+        self._run_git('checkout', '-b', 'testbranch')
+        utils.write_to_file(self._dir('test', 'test_file.txt'),
+                            'test file branched'.encode())
+        self._create_gitreview_file(defaultbranch='testbranch')
+        self._run_git('add', '--all')
+        self._run_git('commit', '-m', 'Branched.')
+        self._run_git('push', 'origin', 'testbranch')
+        # cleanup
         shutil.rmtree(self.test_dir)
 
         # go to the just cloned test Git repository

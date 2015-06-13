@@ -1104,7 +1104,16 @@ def fetch_review(review, masterbranch, remote):
 
     if not len(review_infos):
         raise ReviewInformationNotFound(review)
-    review_info = review_infos[0]
+    for info in review_infos:
+        if 'branch' in info and info['branch'] == masterbranch:
+            if VERBOSE:
+                print('Using review info from branch %s' % info['branch'])
+            review_info = info
+            break
+    else:
+        review_info = review_infos[0]
+        if VERBOSE and 'branch' in review_info:
+            print('Using default branch %s' % review_info['branch'])
 
     try:
         if patchset_number is None:
