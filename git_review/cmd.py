@@ -67,7 +67,7 @@ _rewrites = None
 _rewrites_push = None
 
 
-class colors:
+class colors(object):
     yellow = '\033[33m'
     green = '\033[92m'
     reset = '\033[0m'
