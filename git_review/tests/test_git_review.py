@@ -330,7 +330,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
     def test_bug_topic_newline(self):
         self._run_git_review('-s')
-        self._simple_change('a change', 'new change not for bug\n123')
+        self._simple_change('a change', 'new change not for bug\n\n123')
         self._assert_branch_would_be('master')
 
     def test_bp_topic(self):
@@ -340,8 +340,72 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
     def test_bp_topic_newline(self):
         self._run_git_review('-s')
-        self._simple_change('a change', 'new change not for bluepring\nasdf')
+        self._simple_change('a change', 'new change not for blueprint\n\nasdf')
         self._assert_branch_would_be('master')
+
+    def test_author_name_topic_bp(self):
+        old_author = None
+        if 'GIT_AUTHOR_NAME' in os.environ:
+            old_author = os.environ['GIT_AUTHOR_NAME']
+        try:
+            os.environ['GIT_AUTHOR_NAME'] = 'BPNAME'
+            self._run_git_review('-s')
+            self._simple_change('a change',
+                                'new change 1 with name but no topic')
+            self._assert_branch_would_be('master')
+        finally:
+            if old_author:
+                os.environ['GIT_AUTHOR_NAME'] = old_author
+            else:
+                del os.environ['GIT_AUTHOR_NAME']
+
+    def test_author_email_topic_bp(self):
+        old_author = None
+        if 'GIT_AUTHOR_EMAIL' in os.environ:
+            old_author = os.environ['GIT_AUTHOR_EMAIL']
+        try:
+            os.environ['GIT_AUTHOR_EMAIL'] = 'bpemail@example.com'
+            self._run_git_review('-s')
+            self._simple_change('a change',
+                                'new change 1 with email but no topic')
+            self._assert_branch_would_be('master')
+        finally:
+            if old_author:
+                os.environ['GIT_AUTHOR_EMAIL'] = old_author
+            else:
+                del os.environ['GIT_AUTHOR_EMAIL']
+
+    def test_author_name_topic_bug(self):
+        old_author = None
+        if 'GIT_AUTHOR_NAME' in os.environ:
+            old_author = os.environ['GIT_AUTHOR_NAME']
+        try:
+            os.environ['GIT_AUTHOR_NAME'] = 'Bug: #1234'
+            self._run_git_review('-s')
+            self._simple_change('a change',
+                                'new change 2 with name but no topic')
+            self._assert_branch_would_be('master')
+        finally:
+            if old_author:
+                os.environ['GIT_AUTHOR_NAME'] = old_author
+            else:
+                del os.environ['GIT_AUTHOR_NAME']
+
+    def test_author_email_topic_bug(self):
+        old_author = None
+        if 'GIT_AUTHOR_EMAIL' in os.environ:
+            old_author = os.environ['GIT_AUTHOR_EMAIL']
+        try:
+            os.environ['GIT_AUTHOR_EMAIL'] = 'bug5678@example.com'
+            self._run_git_review('-s')
+            self._simple_change('a change',
+                                'new change 2 with email but no topic')
+            self._assert_branch_would_be('master')
+        finally:
+            if old_author:
+                os.environ['GIT_AUTHOR_EMAIL'] = old_author
+            else:
+                del os.environ['GIT_AUTHOR_EMAIL']
 
     def test_git_review_T(self):
         self._run_git_review('-s')

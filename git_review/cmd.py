@@ -900,7 +900,14 @@ def get_topic(target_branch):
                          "for the topic of the change submitted",
                          "/".join(branch_parts[2:]))
 
-    log_output = run_command("git log HEAD^1..HEAD")
+    preferred_log_format = "%B"
+    log_output = run_command("git log --pretty='" + preferred_log_format +
+                             "' HEAD^1..HEAD")
+    if log_output == preferred_log_format:
+        # The %B format specifier is supported starting at Git v1.7.2. If it's
+        # not supported, we'll just get back '%B', so we try something else.
+        # The downside of %s is that it removes newlines in the subject.
+        log_output = run_command("git log --pretty='%s%n%b' HEAD^1..HEAD")
     bug_re = r'''(?x)                # verbose regexp
                  \b([Bb]ug|[Ll][Pp]) # bug or lp
                  [ \t\f\v]*          # don't want to match newline
