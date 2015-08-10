@@ -239,7 +239,7 @@ Running Tests
 -------------
 The testing system is based on a combination of tox and testr. The canonical
 approach to running tests is to simply run the command `tox`. This will
-create virtual environments, populate them with depenedencies and run all of
+create virtual environments, populate them with dependencies and run all of
 the tests that OpenStack CI systems run. Behind the scenes, tox is running
 `testr run --parallel`, but is set up such that you can supply any additional
 testr arguments that are needed to tox. For example, you can run:
