@@ -162,7 +162,7 @@ def run_command_exc(klazz, *argv, **env):
     klazz should be derived from CommandFailed
     """
     (rc, output) = run_command_status(*argv, **env)
-    if rc != 0:
+    if rc:
         raise klazz(rc, output, argv, env)
     return output
 
@@ -253,7 +253,7 @@ def run_custom_script(action):
             returns.append((status, output, fpath))
 
     for (status, output, path) in returns:
-        if status is not None and status != 0:
+        if status:
             raise CustomScriptException(status, output, [path], {})
         elif output and VERBOSE:
             print("script %s output is:" % (path))
@@ -337,10 +337,10 @@ def set_hooks_commit_msg(remote, target_file):
         else:
             (hostname, username, port, project_name) = \
                 parse_gerrit_ssh_params_from_git_url(remote_url)
-            if username is None:
-                userhost = hostname
-            else:
+            if username:
                 userhost = "%s@%s" % (username, hostname)
+            else:
+                userhost = hostname
             # OS independent target file
             scp_target_file = target_file.replace(os.sep, "/")
             cmd = ["scp", userhost + ":hooks/commit-msg", scp_target_file]
@@ -375,10 +375,10 @@ def make_remote_url(scheme, username, hostname, port, project):
     if port is None and scheme == 'ssh':
         port = 29418
     hostport = '%s:%s' % (hostname, port) if port else hostname
-    if username is None:
-        return "%s://%s/%s" % (scheme, hostport, project)
-    else:
+    if username:
         return "%s://%s@%s/%s" % (scheme, username, hostport, project)
+    else:
+        return "%s://%s/%s" % (scheme, hostport, project)
 
 
 def add_remote(scheme, hostname, port, project, remote, usepushurl):
@@ -412,7 +412,7 @@ def add_remote(scheme, hostname, port, project, remote, usepushurl):
     print("\t%s" % remote_url)
 
     (status, remote_output) = run_command_status(cmd)
-    if status != 0:
+    if status:
         raise CommandFailed(status, remote_output, cmd, {})
 
     if asked_for_username:
