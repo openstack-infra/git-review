@@ -1570,7 +1570,7 @@ def main():
             print(e)
         else:
             print(u.encode('utf-8'))
-        sys.exit(e.EXIT_CODE)
+        sys.exit(getattr(e, 'EXIT_CODE', -1))
 
 
 if __name__ == "__main__":
