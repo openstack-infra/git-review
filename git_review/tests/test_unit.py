@@ -63,7 +63,8 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
         {
             'number': '1010101',
             'branch': 'master',
-            'subject': 'A simple short subject'
+            'subject': 'A simple short subject',
+            'topic': 'simple-topic'
         }, {
             'number': '9877',
             'branch': 'stable/codeword',
@@ -116,6 +117,22 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
             ['1010101           master  A simple short subject',
              '   9877  stable/codeword  A longer and slightly more wordy '
              'subject'],
+            console_output[:2])
+
+    @mock.patch('git_review.cmd.query_reviews')
+    @mock.patch('git_review.cmd.get_remote_url', mock.MagicMock)
+    @mock.patch('git_review.cmd._has_color', False)
+    def test_list_reviews_output_with_topic(self, mock_query):
+
+        mock_query.return_value = self.reviews
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as output:
+            cmd.list_reviews(None, with_topic=True)
+            console_output = output.getvalue().split('\n')
+
+        self.assertEqual(
+            ['1010101           master  simple-topic  A simple short subject',
+             '   9877  stable/codeword             -  A longer and slightly '
+             'more wordy subject'],
             console_output[:2])
 
     @mock.patch('git_review.cmd.query_reviews')

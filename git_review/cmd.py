@@ -78,6 +78,7 @@ class colors(object):
     yellow = '\033[33m'
     green = '\033[92m'
     reset = '\033[0m'
+    blue = '\033[36m'
 
 
 class GitReviewException(Exception):
@@ -990,7 +991,7 @@ class CannotParseOpenChangesets(ChangeSetException):
     EXIT_CODE = 33
 
 
-def list_reviews(remote):
+def list_reviews(remote, with_topic=False):
     remote_url = get_remote_url(remote)
     reviews = query_reviews(remote_url,
                             exception=CannotQueryOpenChangesets,
@@ -1000,18 +1001,27 @@ def list_reviews(remote):
         print("No pending reviews")
         return
 
-    REVIEW_FIELDS = ('number', 'branch', 'subject')
+    if with_topic is True:
+        REVIEW_FIELDS = ('number', 'branch', 'topic', 'subject')
+        # > is right justify, < is left, field indices for py26
+        review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:>{5}}", "{6:<{7}}"]
+    else:
+        REVIEW_FIELDS = ('number', 'branch', 'subject')
+        # > is right justify, < is left, field indices for py26
+        review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:<{5}}"]
+
     FIELDS = range(len(REVIEW_FIELDS))
     if check_use_color_output():
-        review_field_color = (colors.yellow, colors.green, "")
+        if with_topic is True:
+            review_field_color = (colors.yellow, colors.green, colors.blue, "")
+        else:
+            review_field_color = (colors.yellow, colors.green, "")
         color_reset = colors.reset
     else:
-        review_field_color = ("", "", "")
+        review_field_color = ("",) * len(REVIEW_FIELDS)
         color_reset = ""
-    # > is right justify, < is left, field indices for py26
-    review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:<{5}}"]
 
-    review_list = [[r[f] for f in REVIEW_FIELDS] for r in reviews]
+    review_list = [[r.get(f, '-') for f in REVIEW_FIELDS] for r in reviews]
     review_field_width = dict()
     # assume last field is longest and may exceed the console width in which
     # case using the maximum value will result in extra blank lines appearing
@@ -1408,8 +1418,9 @@ def _main():
     parser.add_argument("-f", "--finish", dest="finish", action="store_true",
                         help="Close down this branch and switch back to "
                              "master on successful submission")
-    parser.add_argument("-l", "--list", dest="list", action="store_true",
-                        help="List available reviews for the current project")
+    parser.add_argument("-l", "--list", dest="list", action="count",
+                        help="List available reviews for the current project, "
+                        "if passed more than once, will show more information")
     parser.add_argument("-y", "--yes", dest="yes", action="store_true",
                         help="Indicate that you do, in fact, understand if "
                              "you are submitting more than one patch")
@@ -1512,7 +1523,8 @@ def _main():
                 cherrypick_review("-x")
         return
     elif options.list:
-        list_reviews(remote)
+        with_topic = options.list > 1
+        list_reviews(remote, with_topic=with_topic)
         return
 
     if options.custom_script:
