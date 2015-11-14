@@ -991,62 +991,103 @@ class CannotParseOpenChangesets(ChangeSetException):
     EXIT_CODE = 33
 
 
+class Review(dict):
+    _default_fields = ('branch', 'topic', 'subject')
+
+    def __init__(self, data):
+        if 'number' not in data:
+            raise TypeError("<Review> requires 'number' key in data")
+
+        super(Review, self).__init__(data)
+
+        # provide default values for some fields
+        for field in self._default_fields:
+            self[field] = self.get(field, '-')
+
+
+class ReviewsPrinter(object):
+    def __init__(self, with_topic=False):
+        if with_topic:
+            self.fields = ('number', 'branch', 'topic', 'subject')
+            # > is right justify, < is left, field indices for py26
+            self.fields_format = [
+                u"{0:>{1}}", u"{2:>{3}}", u"{4:>{5}}", u"{6:<{7}}"]
+        else:
+            self.fields = ('number', 'branch', 'subject')
+            # > is right justify, < is left, field indices for py26
+            self.fields_format = [u"{0:>{1}}", u"{2:>{3}}", u"{4:<{5}}"]
+
+        self.fields_colors = ("", "", "", "")
+        self.color_reset = ""
+        if check_use_color_output():
+            self.fields_colors = (
+                colors.yellow, colors.green, colors.blue, "")
+            self.color_reset = colors.reset
+
+        self.reviews = []
+
+    @property
+    def fields_width(self):
+        return [
+            max(len(review[field]) for review in self.reviews)
+            for field in self.fields[:-1]
+        ] + [1]
+
+    def _get_field_format_str(self, field):
+        index = self.fields.index(field)
+        return (
+            self.fields_colors[index] +
+            self.fields_format[index] +
+            self.color_reset
+        )
+
+    def add_review(self, review):
+        self.reviews.append(review)
+
+    def _get_fields_format_str(self):
+        return "  ".join([
+            self._get_field_format_str(field)
+            for field in self.fields])
+
+    def print_review(self, review):
+        fields_format_str = self._get_fields_format_str()
+
+        formatted_fields = []
+        for field, width in zip(self.fields, self.fields_width):
+            formatted_fields.extend((
+                review[field], width
+            ))
+
+        print(fields_format_str.format(*formatted_fields))
+
+    def do_print(self, reviews):
+
+        total_reviews = len(reviews)
+
+        for review in reviews:
+            self.print_review(review)
+
+        print("Found %d items for review" % total_reviews)
+
+
 def list_reviews(remote, with_topic=False):
     remote_url = get_remote_url(remote)
-    reviews = query_reviews(remote_url,
-                            exception=CannotQueryOpenChangesets,
-                            parse_exc=CannotParseOpenChangesets)
+
+    reviews = []
+    for r in query_reviews(remote_url,
+                           exception=CannotQueryOpenChangesets,
+                           parse_exc=CannotParseOpenChangesets):
+        reviews.append(Review(r))
 
     if not reviews:
         print("No pending reviews")
         return
 
-    if with_topic is True:
-        REVIEW_FIELDS = ('number', 'branch', 'topic', 'subject')
-        # > is right justify, < is left, field indices for py26
-        review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:>{5}}", "{6:<{7}}"]
-    else:
-        REVIEW_FIELDS = ('number', 'branch', 'subject')
-        # > is right justify, < is left, field indices for py26
-        review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:<{5}}"]
+    printer = ReviewsPrinter(with_topic=with_topic)
+    for review in reviews:
+        printer.add_review(review)
 
-    FIELDS = range(len(REVIEW_FIELDS))
-    if check_use_color_output():
-        if with_topic is True:
-            review_field_color = (colors.yellow, colors.green, colors.blue, "")
-        else:
-            review_field_color = (colors.yellow, colors.green, "")
-        color_reset = colors.reset
-    else:
-        review_field_color = ("",) * len(REVIEW_FIELDS)
-        color_reset = ""
-
-    review_list = [[r.get(f, '-') for f in REVIEW_FIELDS] for r in reviews]
-    review_field_width = dict()
-    # assume last field is longest and may exceed the console width in which
-    # case using the maximum value will result in extra blank lines appearing
-    # after each entry even when only one field exceeds the console width
-    for i in FIELDS[:-1]:
-        review_field_width[i] = max(len(r[i]) for r in review_list)
-    review_field_width[len(FIELDS) - 1] = 1
-
-    review_field_format = "  ".join([
-        review_field_color[i] +
-        review_field_format[i] +
-        color_reset
-        for i in FIELDS])
-
-    review_field_width = [review_field_width[i] for i in FIELDS]
-    for review_value in review_list:
-        # At this point we have review_field_format
-        # like "{:>{}} {:>{}} {:<{}}" and we need to supply
-        # (value1, width1, value2, width2, ...) tuple to print
-        formatted_fields = []
-        for (width, value) in zip(review_field_width, review_value):
-            formatted_fields.extend([value, width])
-        print(review_field_format.format(*formatted_fields))
-    print("Found %d items for review" % len(reviews))
-
+    printer.do_print(reviews)
     return 0
 
 
