@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import os
 import shutil
 import stat
+import struct
 import sys
 
 if sys.version < '3':
@@ -39,6 +41,20 @@ WAR_URL = 'http://tarballs.openstack.org/' \
 # Update GOLDEN_SITE_VER for every change altering golden site, including
 # WAR_URL changes. Set new value to something unique (just +1 it for example)
 GOLDEN_SITE_VER = '4'
+
+
+# NOTE(yorik-sar): This function needs to be a perfect hash function for
+# existing test IDs. This is verified by running check_test_id_hashes script
+# prior to running tests. Note that this doesn't imply any cryptographic
+# requirements for underlying algorithm, so we can use weak hash here.
+# Range of results for this function is limited by port numbers selection
+# in _pick_gerrit_port_and_dir method (it can't be greater than 10000 now).
+def _hash_test_id(test_id):
+    if not isinstance(test_id, bytes):
+        test_id = test_id.encode('utf-8')
+    hash_ = hashlib.md5(test_id).digest()
+    num = struct.unpack("=I", hash_[:4])[0]
+    return num % 10000
 
 
 class GerritHelpers(object):
@@ -143,7 +159,6 @@ class GerritHelpers(object):
 class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
     """Base class for the git-review tests."""
 
-    _test_counter = 0
     _remote = 'gerrit'
 
     @property
@@ -158,7 +173,6 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         """
         super(BaseGitReviewTestCase, self).setUp()
         self.useFixture(fixtures.Timeout(2 * 60, True))
-        BaseGitReviewTestCase._test_counter += 1
 
         # ensures git-review command runs in local mode (for functional tests)
         self.useFixture(
@@ -326,9 +340,13 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_git('config', 'gitreview.username', 'test_user')
 
     def _pick_gerrit_port_and_dir(self):
-        pid = os.getpid()
-        host = '127.%s.%s.%s' % (self._test_counter, pid >> 8, pid & 255)
-        return host, 29418, host, 8080, self._dir('gerrit', 'site-' + host)
+        hash_ = _hash_test_id(self.id())
+        host = '127.0.0.1'
+        return (
+            host, 12000 + hash_,  # avoid 11211 that is memcached port on CI
+            host, 22000 + hash_,  # avoid ephemeral ports at 32678+
+            self._dir('gerrit', 'site-' + str(hash_)),
+        )
 
     def _create_gitreview_file(self, **kwargs):
         cfg = ('[gerrit]\n'
