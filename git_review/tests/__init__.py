@@ -57,11 +57,57 @@ def _hash_test_id(test_id):
     return num % 10000
 
 
-class GerritHelpers(object):
-
+class DirHelpers(object):
     def _dir(self, base, *args):
         """Creates directory name from base name and other parameters."""
         return os.path.join(getattr(self, base + '_dir'), *args)
+
+
+class IsoEnvDir(DirHelpers, fixtures.Fixture):
+    """Created isolated env and associated directories"""
+
+    def __init__(self, base_dir=None):
+        super(IsoEnvDir, self).setUp()
+
+        # set up directories for isolation
+        if base_dir:
+            self.base_dir = base_dir
+            self.temp_dir = self._dir('base', 'tmp')
+            if not os.path.exists(self.temp_dir):
+                os.mkdir(self.temp_dir)
+            self.addCleanup(shutil.rmtree, self.temp_dir)
+        else:
+            self.temp_dir = self.useFixture(fixtures.TempDir()).path
+
+        self.work_dir = self._dir('temp', 'work')
+        self.home_dir = self._dir('temp', 'home')
+        self.xdg_config_dir = self._dir('home', '.xdgconfig')
+        for path in [self.home_dir, self.xdg_config_dir, self.work_dir]:
+            if not os.path.exists(path):
+                os.mkdir(path)
+
+        # ensure user proxy conf doesn't interfere with tests
+        self.useFixture(fixtures.EnvironmentVariable('no_proxy', '*'))
+        self.useFixture(fixtures.EnvironmentVariable('NO_PROXY', '*'))
+
+        # isolate tests from user and system git configuration
+        self.useFixture(fixtures.EnvironmentVariable('HOME', self.home_dir))
+        self.useFixture(
+            fixtures.EnvironmentVariable('XDG_CONFIG_HOME',
+                                         self.xdg_config_dir))
+        self.useFixture(
+            fixtures.EnvironmentVariable('GIT_CONFIG_NOSYSTEM', "1"))
+        self.useFixture(
+            fixtures.EnvironmentVariable('EMAIL', "you@example.com"))
+        self.useFixture(
+            fixtures.EnvironmentVariable('GIT_AUTHOR_NAME',
+                                         "gitreview tester"))
+        self.useFixture(
+            fixtures.EnvironmentVariable('GIT_COMMITTER_NAME',
+                                         "gitreview tester"))
+
+
+class GerritHelpers(DirHelpers):
 
     def init_dirs(self):
         self.primary_dir = os.path.abspath(os.path.curdir)
@@ -199,23 +245,8 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         self._run_gerrit_cli('create-project', '--empty-commit',
                              '--name', 'test/test_project')
 
-        # ensure user proxy conf doesn't interfere with tests
-        os.environ['no_proxy'] = os.environ['NO_PROXY'] = '*'
-
-        # isolate tests from user and system git configuration
-        self.home_dir = self._dir('site', 'tmp', 'home')
-        self.xdg_config_dir = self._dir('home', '.xdgconfig')
-        os.environ['HOME'] = self.home_dir
-        os.environ['XDG_CONFIG_HOME'] = self.xdg_config_dir
-        os.environ['GIT_CONFIG_NOSYSTEM'] = "1"
-        os.environ['EMAIL'] = "you@example.com"
-        os.environ['GIT_AUTHOR_NAME'] = "gitreview tester"
-        os.environ['GIT_COMMITTER_NAME'] = "gitreview tester"
-        if not os.path.exists(self.home_dir):
-            os.mkdir(self.home_dir)
-        if not os.path.exists(self.xdg_config_dir):
-            os.mkdir(self.xdg_config_dir)
-        self.addCleanup(shutil.rmtree, self.home_dir)
+        # setup isolated area to work under
+        self.useFixture(IsoEnvDir(self.site_dir))
 
         # prepare repository for the testing
         self._run_git('clone', self.project_uri)
