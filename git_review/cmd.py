@@ -388,8 +388,9 @@ def add_remote(scheme, hostname, port, project, remote, usepushurl):
         remote_url = make_remote_url(scheme, username, hostname, port, project)
         print("Trying again with %s" % remote_url)
         if not test_remote_url(remote_url):
-            raise GitReviewException("Could not connect to gerrit at "
-                                     "%s" % remote_url)
+            raise GerritConnectionException(
+                "Could not connect to gerrit at %s" % remote_url
+            )
         asked_for_username = True
 
     if usepushurl:
@@ -1052,6 +1053,11 @@ Does specified change number belong to this project?
 class PatchSetNotFound(ChangeSetException):
     "Review patchset %s not found"
     EXIT_CODE = 38
+
+
+class GerritConnectionException(GitReviewException):
+    """Problem to establish connection to gerrit."""
+    EXIT_CODE = 40
 
 
 class CheckoutNewBranchFailed(CommandFailed):

@@ -60,7 +60,7 @@ can be
 .Ar changeNumber
 as obtained using
 .Fl \-list
-option, or it can be 
+option, or it can be
 .Ar changeNumber,patchsetNumber
 for fetching exact patchset from the change.
 In that case local branch name will have a \-patch[patchsetNumber] suffix.
@@ -353,6 +353,8 @@ Particular patchset cannot be fetched from the remote git repository.
 Specified patchset number not found in the changeset.
 .It 39
 Invalid patchsets for comparison.
+.It 40
+Connection to Gerrit was closed.
 .It 64
 Cannot checkout downloaded patchset into the new branch.
 .It 65
