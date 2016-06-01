@@ -74,7 +74,7 @@ class colors(object):
 
 
 class GitReviewException(Exception):
-    pass
+    EXIT_CODE = 127
 
 
 class CommandFailed(GitReviewException):
