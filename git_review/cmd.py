@@ -110,6 +110,10 @@ def printwrap(unwrapped):
     print('\n'.join(textwrap.wrap(unwrapped)))
 
 
+def warn(warning):
+    printwrap("WARNING: %s")
+
+
 def parse_review_number(review):
     parts = review.split(',')
     if len(parts) < 2:
@@ -280,8 +284,9 @@ class Config(object):
             if os.path.exists(filename):
                 if filename != config_file:
                     msg = ("Using global/system git-review config files (%s) "
-                           "is deprecated")
-                    print(msg % filename)
+                           "is deprecated and will be removed in a future "
+                           "release")
+                    warn(msg % filename)
                 self.config.update(load_config_file(filename))
 
     def __getitem__(self, key):
