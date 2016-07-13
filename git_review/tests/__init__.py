@@ -34,10 +34,11 @@ from testtools import content
 
 from git_review.tests import utils
 
-WAR_URL = 'https://gerrit-releases.storage.googleapis.com/gerrit-2.11.4.war'
+WAR_URL = 'http://tarballs.openstack.org/' \
+          'ci/gerrit/gerrit-v2.11.4.13.cb9800e.war'
 # Update GOLDEN_SITE_VER for every change altering golden site, including
 # WAR_URL changes. Set new value to something unique (just +1 it for example)
-GOLDEN_SITE_VER = '3'
+GOLDEN_SITE_VER = '4'
 
 
 class GerritHelpers(object):
@@ -83,6 +84,16 @@ class GerritHelpers(object):
                       GOLDEN_SITE_VER)
                 return
 
+        # We write out the ssh host key for gerrit's ssh server which
+        # for undocumented reasons forces gerrit init to download the
+        # bouncy castle libs which we need for ssh that works on
+        # newer distros like ubuntu xenial.
+        os.makedirs(self._dir('gsite', 'etc'))
+        # create SSH host key
+        host_key_file = self._dir('gsite', 'etc', 'ssh_host_rsa_key')
+        utils.run_cmd('ssh-keygen', '-t', 'rsa', '-b', '4096',
+                                    '-f', host_key_file, '-N', '')
+
         print("Creating a new golden site of version " + GOLDEN_SITE_VER)
 
         # initialize Gerrit
@@ -90,6 +101,8 @@ class GerritHelpers(object):
                       'init', '-d', self.gsite_dir,
                       '--batch', '--no-auto-start', '--install-plugin',
                       'download-commands')
+        utils.run_cmd('java', '-jar', self.gerrit_war, 'reindex',
+                      '-d', self.gsite_dir)
 
         with open(golden_ver_file, 'w') as f:
             f.write(GOLDEN_SITE_VER)
