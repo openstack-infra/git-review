@@ -898,9 +898,12 @@ def assert_one_change(remote, branch, yes, have_hook):
         if not yes:
             printwrap("You are about to submit multiple commits. This is "
                       "expected if you are submitting a commit that is "
-                      "dependent on one or more in-review commits. Otherwise "
-                      "you should consider squashing your changes into one "
-                      "commit before submitting.")
+                      "dependent on one or more in-review commits, or if you "
+                      "are submitting multiple self-contained but dependent "
+                      "changes. Otherwise you should consider squashing your "
+                      "changes into one commit before submitting (for "
+                      "indivisible changes) or submitting from separate "
+                      "branches (for independent changes).")
             print("\nThe outstanding commits are:\n\n%s\n\n"
                   "Do you really want to submit the above commits?" % output)
             yes_no = do_input("Type 'yes' to confirm, other to cancel: ")
