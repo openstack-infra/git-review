@@ -209,6 +209,8 @@ class BaseGitReviewTestCase(testtools.TestCase, GerritHelpers):
         os.environ['XDG_CONFIG_HOME'] = self.xdg_config_dir
         os.environ['GIT_CONFIG_NOSYSTEM'] = "1"
         os.environ['EMAIL'] = "you@example.com"
+        os.environ['GIT_AUTHOR_NAME'] = "gitreview tester"
+        os.environ['GIT_COMMITTER_NAME'] = "gitreview tester"
         if not os.path.exists(self.home_dir):
             os.mkdir(self.home_dir)
         if not os.path.exists(self.xdg_config_dir):
