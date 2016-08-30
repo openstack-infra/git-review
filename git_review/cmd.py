@@ -787,7 +787,6 @@ def check_remote(branch, remote, scheme, hostname, port, project,
     try:
         add_remote(scheme, hostname, port, project, remote, usepushurl)
     except Exception:
-        print(sys.exc_info()[2])
         if usepushurl:
             printwrap("We don't know where your gerrit is. Please manually"
                       " add a push-url to the '%s' remote and try again."
