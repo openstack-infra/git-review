@@ -24,6 +24,7 @@ import mock
 import testtools
 
 from git_review import cmd
+from git_review.tests import IsoEnvDir
 from git_review.tests import utils
 
 # Use of io.StringIO in python =< 2.7 requires all strings handled to be
@@ -76,17 +77,20 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
         }]
 
     def setUp(self):
+        # will set up isolated env dir
         super(GitReviewConsole, self).setUp()
+
         # ensure all tests get a separate git dir to work in to avoid
         # local git config from interfering
-        self.tempdir = self.useFixture(fixtures.TempDir())
+        iso_env = self.useFixture(IsoEnvDir())
+
         self._run_git = functools.partial(utils.run_git,
-                                          chdir=self.tempdir.path)
+                                          chdir=iso_env.work_dir)
 
         self.run_cmd_patcher = mock.patch('git_review.cmd.run_command_status')
         run_cmd_partial = functools.partial(
-            cmd.run_command_status, GIT_WORK_TREE=self.tempdir.path,
-            GIT_DIR=os.path.join(self.tempdir.path, '.git'))
+            cmd.run_command_status, GIT_WORK_TREE=iso_env.work_dir,
+            GIT_DIR=os.path.join(iso_env.work_dir, '.git'))
         self.run_cmd_mock = self.run_cmd_patcher.start()
         self.run_cmd_mock.side_effect = run_cmd_partial
 
