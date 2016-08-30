@@ -1,5 +1,4 @@
 hacking>=0.10.0,<0.11
-discover
 mock
 fixtures>=0.3.14
 testrepository>=0.0.18
