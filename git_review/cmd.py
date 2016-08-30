@@ -174,11 +174,13 @@ def run_command_exc(klazz, *argv, **env):
     return output
 
 
-def git_credentials(klazz, url):
-    """Get credentials using git credential."""
+def git_credentials(url):
+    """Return credentials using git credential or None."""
     cmd = 'git', 'credential', 'fill'
     stdin = 'url=%s' % url
-    out = run_command_exc(klazz, *cmd, stdin=stdin)
+    rc, out = run_command_status(*cmd, stdin=stdin)
+    if rc:
+        return None
     data = dict(l.split('=', 1) for l in out.splitlines())
     return data['username'], data['password']
 
@@ -203,8 +205,10 @@ def run_http_exc(klazz, url, **env):
     try:
         res = requests.get(url, **env)
         if res.status_code == 401:
-            env['auth'] = git_credentials(klazz, url)
-            res = requests.get(url, **env)
+            creds = git_credentials(url)
+            if creds:
+                env['auth'] = creds
+                res = requests.get(url, **env)
     except klazz:
         raise
     except Exception as err:

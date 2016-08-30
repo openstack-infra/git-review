@@ -245,7 +245,7 @@ class GitReviewUnitTest(testtools.TestCase):
             self.assertEqual(255, err.code)
             mock_get.assert_called_once_with(url)
 
-    @mock.patch('git_review.cmd.run_command_exc')
+    @mock.patch('git_review.cmd.run_command_status')
     @mock.patch('requests.get', return_value=FakeResponse(200))
     def test_run_http_exc_without_auth(self, mock_get, mock_run):
         url = 'http://user@gerrit.example.com'
@@ -254,21 +254,21 @@ class GitReviewUnitTest(testtools.TestCase):
         self.assertFalse(mock_run.called)
         mock_get.assert_called_once_with(url)
 
-    @mock.patch('git_review.cmd.run_command_exc',
-                return_value=FAKE_GIT_CREDENTIAL_FILL)
+    @mock.patch('git_review.cmd.run_command_status',
+                return_value=(0, FAKE_GIT_CREDENTIAL_FILL))
     @mock.patch('requests.get',
                 side_effect=[FakeResponse(401), FakeResponse(200)])
     def test_run_http_exc_with_auth(self, mock_get, mock_run):
         url = 'http://user@gerrit.example.com'
 
         cmd.run_http_exc(FakeException, url)
-        mock_run.assert_called_once_with(mock.ANY, 'git', 'credential', 'fill',
+        mock_run.assert_called_once_with('git', 'credential', 'fill',
                                          stdin='url=%s' % url)
         calls = [mock.call(url), mock.call(url, auth=('user', 'pass'))]
         mock_get.assert_has_calls(calls)
 
-    @mock.patch('git_review.cmd.run_command_exc',
-                return_value=FAKE_GIT_CREDENTIAL_FILL)
+    @mock.patch('git_review.cmd.run_command_status',
+                return_value=(0, FAKE_GIT_CREDENTIAL_FILL))
     @mock.patch('requests.get', return_value=FakeResponse(401))
     def test_run_http_exc_with_failing_auth(self, mock_get, mock_run):
         url = 'http://user@gerrit.example.com'
@@ -278,10 +278,25 @@ class GitReviewUnitTest(testtools.TestCase):
             self.fails('Exception expected')
         except FakeException as err:
             self.assertEqual(cmd.http_code_2_return_code(401), err.code)
-        mock_run.assert_called_once_with(mock.ANY, 'git', 'credential', 'fill',
+        mock_run.assert_called_once_with('git', 'credential', 'fill',
                                          stdin='url=%s' % url)
         calls = [mock.call(url), mock.call(url, auth=('user', 'pass'))]
         mock_get.assert_has_calls(calls)
+
+    @mock.patch('git_review.cmd.run_command_status',
+                return_value=(1, ''))
+    @mock.patch('requests.get', return_value=FakeResponse(401))
+    def test_run_http_exc_with_failing_git_creds(self, mock_get, mock_run):
+        url = 'http://user@gerrit.example.com'
+
+        try:
+            cmd.run_http_exc(FakeException, url)
+            self.fails('Exception expected')
+        except FakeException as err:
+            self.assertEqual(cmd.http_code_2_return_code(401), err.code)
+        mock_run.assert_called_once_with('git', 'credential', 'fill',
+                                         stdin='url=%s' % url)
+        mock_get.assert_called_once_with(url)
 
     @mock.patch('sys.argv', ['argv0', '--track', 'branch'])
     @mock.patch('git_review.cmd.check_remote')
