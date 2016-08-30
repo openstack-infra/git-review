@@ -1447,8 +1447,8 @@ def _main():
                         yes=False)
     try:
         (top_dir, git_dir) = git_directories()
-    except GitDirectoriesException as no_git_dir:
-        pass
+    except GitDirectoriesException as _no_git_dir:
+        no_git_dir = _no_git_dir
     else:
         no_git_dir = False
         config = Config(os.path.join(top_dir, ".gitreview"))
@@ -1457,12 +1457,13 @@ def _main():
                             remote=None,
                             usepushurl=convert_bool(config['usepushurl']))
     options = parser.parse_args()
-    if no_git_dir:
-        raise no_git_dir
 
     if options.license:
         print(COPYRIGHT)
         sys.exit(0)
+
+    if no_git_dir:
+        raise no_git_dir
 
     if options.branch is None:
         branch = config['branch']
