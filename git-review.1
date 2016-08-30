@@ -60,13 +60,15 @@ can be
 .Ar changeNumber
 as obtained using
 .Fl \-list
-option, or it can be 
+option, or it can be
 .Ar changeNumber,patchsetNumber
 for fetching exact patchset from the change.
 In that case local branch name will have a \-patch[patchsetNumber] suffix.
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl c , Fl \-compatible
+Push changes to refs compatible with Gerrit of versions before 2.3.
 .It Fl d Ar change , Fl \-download= Ns Ar change
 Download
 .Ar change
@@ -106,6 +108,9 @@ creating a local branch for it.
 .Pp
 If the current branch is different enough, the change may not apply at all
 or produce merge conflicts that need to be resolved by hand.
+.It Fl i , Fl \-new\-changeid
+Force the git-review to generate a new Change-Id, even if one already exists
+in the changelog.
 .It Fl m Ar change\-ps\-range , Fl \-compare= Ns Ar change\-ps\-range
 Download the specified  patchsets for
 .Ar change
@@ -131,6 +136,8 @@ to always skip rebasing.
 .It Fl f , Fl \-finish
 Close down the local branch and switch back to the target branch on
 successful submission.
+.It Fl F , Fl \-force\-rebase
+Force a rebase before doing anything else, even if not otherwise needed.
 .It Fl n , Fl \-dry\-run
 Don\(aqt actually perform any commands that have direct effects. Print them
 instead.
@@ -139,7 +146,7 @@ Git remote to use for Gerrit.
 .It Fl s , Fl \-setup
 Just run the repo setup commands but don\(aqt submit anything.
 .It Fl t Ar topic , Fl \-topic= Ns Ar topic
-Sets the target topic for this change on the gerrit server.
+Sets the target topic for this change on the Gerrit server.
 If not specified, a bug number from the commit summary will be used. Alternatively, the local branch name will be used if different from remote branch.
 .It Fl T , Fl \-no\-topic
 Submit review without topic.
@@ -148,11 +155,11 @@ Subscribe one or more reviewers to the uploaded patch sets.  Reviewers should be
 .It Fl u , Fl \-update
 Skip cached local copies and force updates from network resources.
 .It Fl l , Fl \-list
-List the available reviews on the gerrit server for this project.
+List the available reviews on the Gerrit server for this project.
 .It Fl y , Fl \-yes
 Indicate that you do, in fact, understand if you are submitting more than
 one patch.
-.It Fl v Fl \-verbose
+.It Fl v , Fl \-verbose
 Turns on more verbose output.
 .It Fl D , Fl \-draft
 Submit review as a draft. Requires Gerrit 2.3 or newer.
@@ -165,6 +172,13 @@ When submitting a change for review, you will usually want it to be based on the
 Also can be used for
 .Fl \-compare
 to skip automatic rebase of fetched reviews.
+.It Fl \-color Ar always|never|auto
+Enable or disable a color output. Default is "auto".
+.It Fl \-no\-color
+Same thing as \-\-color=never.
+.It Fl \-no\-custom\-script
+Do not run scripts, installed as hooks/{action}-review, where action
+is one of "pre", "draft", or "post".
 .It Fl \-track
 Choose the branch to submit the change against (and, if
 rebasing, to rebase against) from the branch being tracked
@@ -177,6 +191,9 @@ Ignore any branch being tracked by the current branch,
 overriding gitreview.track.
 This option is implied by providing a specific branch name
 on the command line.
+.It Fl \-use-pushurl
+Use the pushurl option for the origin remote rather than conventional
+separate Gerrit remotes.
 .It Fl \-version
 Print the version number and exit.
 .El
@@ -278,10 +295,10 @@ If you wish not to use color for any output. (default with Git older than 1.8.4)
 .El
 .Pp
 .Nm
-will query git credential system for gerrit user/password when
+will query git credential system for Gerrit user/password when
 authentication failed over http(s). Unlike git,
 .Nm
-does not persist gerrit user/password in git credential system for security
+does not persist Gerrit user/password in git credential system for security
 purposes and git credential system configuration stays under user responsibility.
 .Sh FILES
 To use
@@ -289,7 +306,7 @@ To use
 with your project, it is recommended that you create
 a file at the root of the repository named
 .Pa .gitreview
-and place information about your gerrit installation in it.  The format is similar to the Windows .ini file format:
+and place information about your Gerrit installation in it.  The format is similar to the Windows .ini file format:
 .Bd -literal -offset indent
 [gerrit]
 host=\fIhostname\fP
