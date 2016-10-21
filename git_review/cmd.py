@@ -1008,8 +1008,8 @@ def list_reviews(remote):
     else:
         review_field_color = ("", "", "")
         color_reset = ""
-    review_field_format = ["%*s", "%*s", "%*s"]
-    review_field_justify = [+1, +1, -1]  # +1 is justify to right
+    # > is right justify, < is left, field indices for py26
+    review_field_format = ["{0:>{1}}", "{2:>{3}}", "{4:<{5}}"]
 
     review_list = [[r[f] for f in REVIEW_FIELDS] for r in reviews]
     review_field_width = dict()
@@ -1026,20 +1026,15 @@ def list_reviews(remote):
         color_reset
         for i in FIELDS])
 
-    review_field_width = [
-        review_field_width[i] * review_field_justify[i]
-        for i in FIELDS]
+    review_field_width = [review_field_width[i] for i in FIELDS]
     for review_value in review_list:
         # At this point we have review_field_format
-        # like "%*s %*s %*s" and we need to supply
-        # (width1, value1, width2, value2, ...) tuple to print
-        # It's easy to zip() widths with actual values,
-        # but we need to flatten the resulting
-        #  ((width1, value1), (width2, value2), ...) map.
+        # like "{:>{}} {:>{}} {:<{}}" and we need to supply
+        # (value1, width1, value2, width2, ...) tuple to print
         formatted_fields = []
         for (width, value) in zip(review_field_width, review_value):
-            formatted_fields.extend([width, value.encode('utf-8')])
-        print(review_field_format % tuple(formatted_fields))
+            formatted_fields.extend([value, width])
+        print(review_field_format.format(*formatted_fields))
     print("Found %d items for review" % len(reviews))
 
     return 0
