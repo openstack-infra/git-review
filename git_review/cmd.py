@@ -525,7 +525,7 @@ def parse_gerrit_ssh_params_from_git_url(git_url):
             hostname = parsed_url.path[2:].split("/")[0]
 
         if "@" in hostname:
-            (username, hostname) = hostname.split("@")
+            (username, _, hostname) = hostname.rpartition("@")
         if ":" in hostname:
             (hostname, port) = hostname.split(":")
 
