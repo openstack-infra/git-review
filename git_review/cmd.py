@@ -20,6 +20,7 @@ limitations under the License."""
 
 import argparse
 import datetime
+import getpass
 import json
 import os
 import re
@@ -391,9 +392,7 @@ def add_remote(scheme, hostname, port, project, remote, usepushurl):
 
     username = git_config_get_value("gitreview", "username")
     if not username:
-        username = os.getenv("USERNAME")
-    if not username:
-        username = os.getenv("USER")
+        username = getpass.getuser()
 
     remote_url = make_remote_url(scheme, username, hostname, port, project)
     if VERBOSE:
