@@ -120,7 +120,7 @@ def printwrap(unwrapped):
 
 
 def warn(warning):
-    printwrap("WARNING: %s")
+    printwrap("WARNING: %s" % warning)
 
 
 def parse_review_number(review):
