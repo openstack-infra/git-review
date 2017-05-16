@@ -5,12 +5,15 @@
 Installing git-review
 =====================
 
-Install with pip install git-review
+``git-review`` can be often be installed via system packages, ``pypi``
+releases or other platform-specific methods.  See
+`<https://www.mediawiki.org/wiki/Gerrit/git-review>`__ for platform
+information.
 
-For assistance installing pip on your os check out get-pip:
-http://pip.readthedocs.org/en/latest/installing.html
+For assistance installing pacakges from ``pypi`` on your OS check out
+`get-pip.py <https://pip.pypa.io/en/stable/installing/>`__.
 
-For installation from source simply add git-review to your $PATH
+For installation from source simply add ``git-review`` to your $PATH
 after installing the dependencies listed in requirements.txt
 
 Setup
