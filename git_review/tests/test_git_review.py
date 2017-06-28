@@ -486,6 +486,8 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
                                                 'test/test_project2')
         self._run_git('fetch', project2_uri, 'HEAD')
         self._run_git('checkout', 'FETCH_HEAD')
+        # We have to rewrite the .gitreview file after this checkout.
+        self._create_gitreview_file()
         self._simple_change('project2: test1', 'project2: change1, open')
         self._run_git('push', project2_uri, 'HEAD:refs/for/master')
 

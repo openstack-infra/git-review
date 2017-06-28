@@ -180,7 +180,7 @@ def git_credentials(url):
     """Return credentials using git credential or None."""
     cmd = 'git', 'credential', 'fill'
     stdin = 'url=%s' % url
-    rc, out = run_command_status(*cmd, stdin=stdin)
+    rc, out = run_command_status(*cmd, stdin=stdin.encode('utf-8'))
     if rc:
         return None
     data = dict(l.split('=', 1) for l in out.splitlines())
@@ -558,29 +558,49 @@ def parse_gerrit_ssh_params_from_git_url(git_url):
     return (hostname, username, port, project_name)
 
 
-def query_reviews(remote_url, change=None, current_patch_set=True,
-                  exception=CommandFailed, parse_exc=Exception):
+def query_reviews(remote_url, project=None, change=None,
+                  current_patch_set=True, exception=CommandFailed,
+                  parse_exc=Exception):
     if remote_url.startswith('http://') or remote_url.startswith('https://'):
         query = query_reviews_over_http
     else:
         query = query_reviews_over_ssh
     return query(remote_url,
+                 project=project,
                  change=change,
                  current_patch_set=current_patch_set,
                  exception=exception,
                  parse_exc=parse_exc)
 
 
-def query_reviews_over_http(remote_url, change=None, current_patch_set=True,
-                            exception=CommandFailed, parse_exc=Exception):
-    url = urljoin(remote_url, '/changes/')
+def query_reviews_over_http(remote_url, project=None, change=None,
+                            current_patch_set=True, exception=CommandFailed,
+                            parse_exc=Exception):
+    if project:
+        # Remove any trailing .git suffixes for project to url comparison
+        clean_url = os.path.splitext(remote_url)[0]
+        clean_project = os.path.splitext(project)[0]
+        if clean_url.endswith(clean_project):
+            # Get the "root" url for gerrit by removing the project from the
+            # url. For example:
+            # https://example.com/foo/project.git gets truncated to
+            # https://example.com/foo/ regardless of whether or not none,
+            # either, or both of the remote_url or project strings end
+            # with .git.
+            remote_url = clean_url[:-len(clean_project)]
+    url = urljoin(remote_url, 'changes/')
     if change:
         if current_patch_set:
             url += '?q=%s&o=CURRENT_REVISION' % change
         else:
             url += '?q=%s&o=ALL_REVISIONS' % change
     else:
-        project_name = re.sub(r"^/|(\.git$)", "", urlparse(remote_url).path)
+        if project:
+            project_name = re.sub(r"^/|(\.git$)", "",
+                                  project)
+        else:
+            project_name = re.sub(r"^/|(\.git$)", "",
+                                  urlparse(remote_url).path)
         params = urlencode({'q': 'project:%s status:open' % project_name})
         url += '?' + params
 
@@ -611,8 +631,9 @@ def query_reviews_over_http(remote_url, change=None, current_patch_set=True,
     return reviews
 
 
-def query_reviews_over_ssh(remote_url, change=None, current_patch_set=True,
-                           exception=CommandFailed, parse_exc=Exception):
+def query_reviews_over_ssh(remote_url, project=None, change=None,
+                           current_patch_set=True, exception=CommandFailed,
+                           parse_exc=Exception):
     (hostname, username, port, project_name) = \
         parse_gerrit_ssh_params_from_git_url(remote_url)
 
@@ -1074,11 +1095,12 @@ class ReviewsPrinter(object):
         print("Found %d items for review" % total_reviews)
 
 
-def list_reviews(remote, with_topic=False):
+def list_reviews(remote, project, with_topic=False):
     remote_url = get_remote_url(remote)
 
     reviews = []
     for r in query_reviews(remote_url,
+                           project=project,
                            exception=CannotQueryOpenChangesets,
                            parse_exc=CannotParseOpenChangesets):
         reviews.append(Review(r))
@@ -1163,7 +1185,7 @@ class BranchTrackingMismatch(GitReviewException):
     EXIT_CODE = 70
 
 
-def fetch_review(review, masterbranch, remote):
+def fetch_review(review, masterbranch, remote, project):
     remote_url = get_remote_url(remote)
 
     review_arg = review
@@ -1171,6 +1193,7 @@ def fetch_review(review, masterbranch, remote):
     current_patch_set = patchset_number is None
 
     review_infos = query_reviews(remote_url,
+                                 project=project,
                                  change=review,
                                  current_patch_set=current_patch_set,
                                  exception=CannotQueryPatchSet,
@@ -1556,7 +1579,8 @@ def _main():
                            branch, remote, options.rebase)
             return
         local_branch, remote_branch = fetch_review(options.changeidentifier,
-                                                   branch, remote)
+                                                   branch, remote,
+                                                   config['project'])
         if options.download:
             checkout_review(local_branch, remote, remote_branch)
         else:
@@ -1569,7 +1593,7 @@ def _main():
         return
     elif options.list:
         with_topic = options.list > 1
-        list_reviews(remote, with_topic=with_topic)
+        list_reviews(remote, config['project'], with_topic=with_topic)
         return
 
     if options.custom_script:

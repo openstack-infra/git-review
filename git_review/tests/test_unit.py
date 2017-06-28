@@ -110,7 +110,7 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
 
         mock_query.return_value = self.reviews
         with mock.patch('sys.stdout', new_callable=io.StringIO) as output:
-            cmd.list_reviews(None)
+            cmd.list_reviews(None, None)
             console_output = output.getvalue().split('\n')
 
         self.assertEqual(
@@ -126,7 +126,7 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
 
         mock_query.return_value = self.reviews
         with mock.patch('sys.stdout', new_callable=io.StringIO) as output:
-            cmd.list_reviews(None, with_topic=True)
+            cmd.list_reviews(None, None, with_topic=True)
             console_output = output.getvalue().split('\n')
 
         self.assertEqual(
@@ -142,7 +142,7 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
 
         mock_query.return_value = self.reviews
         with mock.patch('sys.stdout', new_callable=io.StringIO) as output:
-            cmd.list_reviews(None)
+            cmd.list_reviews(None, None)
             console_output = output.getvalue().split('\n')
 
         wrapper = textwrap.TextWrapper(replace_whitespace=False,
@@ -295,8 +295,10 @@ class GitReviewUnitTest(testtools.TestCase):
         url = 'http://user@gerrit.example.com'
 
         cmd.run_http_exc(FakeException, url)
+        # This gets encoded to utf8 which means the type passed down
+        # is bytes.
         mock_run.assert_called_once_with('git', 'credential', 'fill',
-                                         stdin='url=%s' % url)
+                                         stdin=b'url=%s' % url.encode('utf-8'))
         calls = [mock.call(url), mock.call(url, auth=('user', 'pass'))]
         mock_get.assert_has_calls(calls)
 
@@ -311,8 +313,10 @@ class GitReviewUnitTest(testtools.TestCase):
             self.fails('Exception expected')
         except FakeException as err:
             self.assertEqual(cmd.http_code_2_return_code(401), err.code)
+        # This gets encoded to utf8 which means the type passed down
+        # is bytes.
         mock_run.assert_called_once_with('git', 'credential', 'fill',
-                                         stdin='url=%s' % url)
+                                         stdin=b'url=%s' % url.encode('utf-8'))
         calls = [mock.call(url), mock.call(url, auth=('user', 'pass'))]
         mock_get.assert_has_calls(calls)
 
@@ -327,8 +331,10 @@ class GitReviewUnitTest(testtools.TestCase):
             self.fails('Exception expected')
         except FakeException as err:
             self.assertEqual(cmd.http_code_2_return_code(401), err.code)
+        # This gets encoded to utf8 which means the type passed down
+        # is bytes.
         mock_run.assert_called_once_with('git', 'credential', 'fill',
-                                         stdin='url=%s' % url)
+                                         stdin=b'url=%s' % url.encode('utf-8'))
         mock_get.assert_called_once_with(url)
 
     @mock.patch('sys.argv', ['argv0', '--track', 'branch'])
