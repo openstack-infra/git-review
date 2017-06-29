@@ -66,7 +66,7 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
             'subject': 'A simple short subject',
             'topic': 'simple-topic'
         }, {
-            'number': '9877',
+            'number': 9877,  # Starting with 2.14, numbers are sent as int
             'branch': 'stable/codeword',
             'subject': 'A longer and slightly more wordy subject'
         }, {

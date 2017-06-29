@@ -1028,7 +1028,7 @@ class ReviewsPrinter(object):
     @property
     def fields_width(self):
         return [
-            max(len(review[field]) for review in self.reviews)
+            max(len(str(review[field])) for review in self.reviews)
             for field in self.fields[:-1]
         ] + [1]
 
