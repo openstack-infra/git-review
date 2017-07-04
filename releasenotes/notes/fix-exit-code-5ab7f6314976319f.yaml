@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fixes ``gitreview`` process exit code to align with general
+    UNIX process exit code conventions. Specifically, default exit
+    code changed to ``1`` which stands for "general error".

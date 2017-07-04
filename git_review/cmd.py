@@ -75,7 +75,7 @@ class colors(object):
 
 
 class GitReviewException(Exception):
-    EXIT_CODE = 127
+    EXIT_CODE = 1
 
 
 class CommandFailed(GitReviewException):
@@ -1704,7 +1704,7 @@ def main():
         _main()
     except GitReviewException as e:
         print(e)
-        sys.exit(getattr(e, 'EXIT_CODE', -1))
+        sys.exit(e.EXIT_CODE)
 
 
 if __name__ == "__main__":
