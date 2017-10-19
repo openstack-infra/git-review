@@ -278,9 +278,14 @@ def git_config_get_value(section, option, default=None, as_bool=False):
         __, git_dir = git_directories()
         cmd[2:2] = ['-f', os.path.join(git_dir, 'config')]
     try:
-        return run_command_exc(GitConfigException, *cmd).strip()
+        result = run_command_exc(GitConfigException, *cmd).strip()
+        if VERBOSE:
+            print(datetime.datetime.now(), "result:", result)
+        return result
     except GitConfigException as exc:
         if exc.rc == 1:
+            if VERBOSE:
+                print(datetime.datetime.now(), "using default:", default)
             return default
         raise
 
