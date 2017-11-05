@@ -1227,11 +1227,11 @@ def checkout_review(branch_name, remote, remote_branch):
         run_command_exc(CheckoutNewBranchFailed,
                         "git", "checkout", "-b",
                         branch_name, "FETCH_HEAD")
-        # --set-upstream-to is not supported in git 1.7
+        # --set-upstream-to is supported starting in git 1.8
         run_command_exc(SetUpstreamBranchFailed,
-                        "git", "branch", "--set-upstream",
-                        branch_name,
-                        '%s/%s' % (remote, remote_branch))
+                        "git", "branch", "--set-upstream-to",
+                        '%s/%s' % (remote, remote_branch),
+                        branch_name)
 
     except CheckoutNewBranchFailed as e:
         if re.search("already exists\.?", e.output):

@@ -16,6 +16,8 @@ For assistance installing pacakges from ``pypi`` on your OS check out
 For installation from source simply add ``git-review`` to your $PATH
 after installing the dependencies listed in requirements.txt
 
+.. note:: ``git-review`` requires git version 1.8 or greater.
+
 Setup
 =====
 
