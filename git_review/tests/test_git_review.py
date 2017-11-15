@@ -310,9 +310,9 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         # track different branch than expected in changeset
         branch = self._run_git('rev-parse', '--abbrev-ref', 'HEAD')
         self._run_git('branch',
-                      '--set-upstream',
-                      branch,
-                      'remotes/origin/other')
+                      '--set-upstream-to',
+                      'remotes/origin/other',
+                      branch)
         self.assertRaises(
             Exception,  # cmd.BranchTrackingMismatch inside
             self._run_git_review, '-d', change_id)
