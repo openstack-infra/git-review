@@ -68,13 +68,6 @@ _rewrites = None
 _rewrites_push = None
 
 
-def print_safe_encoding(str):
-    if sys.stdout.encoding is None:
-        print(str)
-    else:
-        print(str.encode(sys.stdout.encoding, 'replace'))
-
-
 class colors(object):
     yellow = '\033[33m'
     green = '\033[92m'
@@ -154,9 +147,8 @@ def run_command_status(*argv, **kwargs):
                          stdin=subprocess.PIPE if stdin else None,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT,
-                         env=newenv)
+                         env=newenv, universal_newlines=True)
     (out, nothing) = p.communicate(stdin)
-    out = out.decode('utf-8', 'replace')
     return (p.returncode, out.strip())
 
 
@@ -266,7 +258,7 @@ def run_custom_script(action):
             raise CustomScriptException(status, output, [path], {})
         elif output and VERBOSE:
             print("script %s output is:" % (path))
-            print_safe_encoding(output)
+            print(output)
 
 
 def git_config_get_value(section, option, default=None, as_bool=False):
@@ -659,7 +651,7 @@ def query_reviews_over_ssh(remote_url, project=None, change=None,
         "gerrit", "query",
         "--format=JSON %s" % query)
     if VERBOSE:
-        print_safe_encoding(output)
+        print(output)
 
     changes = []
     try:
@@ -671,7 +663,7 @@ def query_reviews_over_ssh(remote_url, project=None, change=None,
                         changes.append(data)
                 except Exception:
                     if VERBOSE:
-                        print_safe_encoding(output)
+                        print(output)
     except Exception as err:
         raise parse_exc(err)
     return changes
@@ -738,11 +730,11 @@ def update_remote(remote):
     cmd = "git remote update %s" % remote
     (status, output) = run_command_status(cmd)
     if VERBOSE:
-        print_safe_encoding(output)
+        print(output)
     if status != 0:
         print("Problem running '%s'" % cmd)
         if not VERBOSE:
-            print_safe_encoding(output)
+            print(output)
         return False
     return True
 
@@ -850,7 +842,7 @@ def rebase_changes(branch, remote, interactive=True):
     if status != 0:
         print("Errors running %s" % cmd)
         if interactive:
-            print_safe_encoding(output)
+            print(output)
         return False
     _orig_head = output
 
@@ -871,14 +863,14 @@ def rebase_changes(branch, remote, interactive=True):
     if status != 0:
         print("Errors running %s" % cmd)
         if interactive:
-            print_safe_encoding(output)
-            print("It is likely that your change has a merge conflict. "
-                  "You may resolve it in the working tree now as "
-                  "described above and then run 'git review' again, or "
-                  "if you do not want to resolve it yet (note that the "
-                  "change can not merge until the conflict is resolved) "
-                  "you may run 'git rebase --abort' then 'git review -R' "
-                  "to upload the change without rebasing.")
+            print(output)
+            printwrap("It is likely that your change has a merge conflict. "
+                      "You may resolve it in the working tree now as "
+                      "described above and then run 'git review' again, or "
+                      "if you do not want to resolve it yet (note that the "
+                      "change can not merge until the conflict is resolved) "
+                      "you may run 'git rebase --abort' then 'git review -R' "
+                      "to upload the change without rebasing.")
         return False
     return True
 
@@ -892,7 +884,7 @@ def undo_rebase():
     (status, output) = run_command_status(cmd)
     if status != 0:
         print("Errors running %s" % cmd)
-        print_safe_encoding(output)
+        print(output)
         return False
     return True
 
@@ -919,7 +911,7 @@ def assert_one_change(remote, branch, yes, have_hook):
     (status, output) = run_command_status(cmd)
     if status != 0:
         print("Had trouble running %s" % cmd)
-        print_safe_encoding(output)
+        print(output)
         sys.exit(1)
     filtered = filter(None, output.split("\n"))
     output_lines = sum(1 for s in filtered)
@@ -1655,7 +1647,7 @@ def _main():
         print("\t%s\n" % cmd)
     else:
         (status, output) = run_command_status(cmd)
-        print_safe_encoding(output)
+        print(output)
 
     if options.finish and not options.dry and status == 0:
         finish_branch(branch)
@@ -1670,16 +1662,7 @@ def main():
     try:
         _main()
     except GitReviewException as e:
-        # If one does unguarded print(e) here, in certain locales the implicit
-        # str(e) blows up with familiar "UnicodeEncodeError ... ordinal not in
-        # range(128)". See rhbz#1058167.
-        try:
-            u = unicode(e)
-        except NameError:
-            # Python 3, we're home free.
-            print(e)
-        else:
-            print(u.encode('utf-8'))
+        print(e)
         sys.exit(getattr(e, 'EXIT_CODE', -1))
 
 
