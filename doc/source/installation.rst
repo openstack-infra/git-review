@@ -18,6 +18,16 @@ after installing the dependencies listed in requirements.txt
 
 .. note:: ``git-review`` requires git version 1.8 or greater.
 
+Windows
+-------
+
+The Windows ``cmd`` console has a number of issues with Python and
+Unicode encodings which can manifest when reviews include non-ASCII
+characters.  Python 3.6 and beyond has addressed most issues and is
+recommended for Windows users.  For earlier Python versions,
+modifying the local install with `win-unicode-console
+<https://github.com/Drekin/win-unicode-console>`__ may also help.
+
 Setup
 =====
 
