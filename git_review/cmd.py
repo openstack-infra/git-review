@@ -1209,7 +1209,7 @@ def fetch_review(review, masterbranch, remote, project):
             refspec = review_info['currentPatchSet']['ref']
         else:
             refspec = [ps for ps in review_info['patchSets']
-                       if str(ps['number']) == patchset_number][0]['ref']
+                       if int(ps['number']) == int(patchset_number)][0]['ref']
     except IndexError:
         raise PatchSetNotFound(review_arg)
     except KeyError:
@@ -1248,10 +1248,11 @@ def checkout_review(branch_name, remote, remote_branch):
                         "git", "checkout", "-b",
                         branch_name, "FETCH_HEAD")
         # --set-upstream-to is supported starting in git 1.8
-        run_command_exc(SetUpstreamBranchFailed,
-                        "git", "branch", "--set-upstream-to",
-                        '%s/%s' % (remote, remote_branch),
-                        branch_name)
+        if remote is not None:
+            run_command_exc(SetUpstreamBranchFailed,
+                            "git", "branch", "--set-upstream-to",
+                            '%s/%s' % (remote, remote_branch),
+                            branch_name)
 
     except CheckoutNewBranchFailed as e:
         if re.search("already exists\.?", e.output):
@@ -1308,7 +1309,7 @@ class InvalidPatchsetsToCompare(GitReviewException):
     EXIT_CODE = 39
 
 
-def compare_review(review_spec, branch, remote, rebase=False):
+def compare_review(review_spec, branch, remote, project, rebase=False):
     new_ps = None    # none means latest
 
     if '-' in review_spec:
@@ -1321,7 +1322,7 @@ def compare_review(review_spec, branch, remote, rebase=False):
     old_review = build_review_number(review, old_ps)
     new_review = build_review_number(review, new_ps)
 
-    old_branch, _ = fetch_review(old_review, branch, remote)
+    old_branch, _ = fetch_review(old_review, branch, remote, project)
     checkout_review(old_branch, None, None)
 
     if rebase:
@@ -1331,7 +1332,11 @@ def compare_review(review_spec, branch, remote, rebase=False):
             print('Skipping rebase because of conflicts')
             run_command_exc(CommandFailed, 'git', 'rebase', '--abort')
 
-    new_branch, remote_branch = fetch_review(new_review, branch, remote)
+    new_branch, remote_branch = fetch_review(
+        new_review,
+        branch,
+        remote,
+        project)
     checkout_review(new_branch, remote, remote_branch)
 
     if rebase:
@@ -1628,7 +1633,8 @@ def _main():
     if options.changeidentifier:
         if options.compare:
             compare_review(options.changeidentifier,
-                           branch, remote, options.rebase)
+                           branch, remote, config['project'],
+                           options.rebase)
             return
         local_branch, remote_branch = fetch_review(options.changeidentifier,
                                                    branch, remote,
