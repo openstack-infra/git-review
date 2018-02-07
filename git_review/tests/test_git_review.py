@@ -143,6 +143,21 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
             'refs/remotes/%s/master' % self._remote,
             self._run_git("for-each-ref", "--format='%(upstream)'", head))
 
+        # add some more changes & upload
+        self._simple_amend('test 2nd rev',
+                           self._dir('test', '2nd_rev_file.txt'))
+        self._run_git_review('-v')
+        self._simple_amend('test 3rd rev',
+                           self._dir('test', '3rd_rev_file.txt'))
+        self._run_git_review('-v')
+
+        # get rev 2; assert rev2 file is there, but not rev3
+        self._run_git_review('-d', '%s,%s' % (change_id, 2))
+        self.assertIn('2nd_rev_file.txt',
+                      self._run_git('show', 'HEAD'))
+        self.assertNotIn('3rd_rev_file.txt',
+                         self._run_git('show', 'HEAD'))
+
     def test_multiple_changes(self):
         """Test git-review asks about multiple changes.
 
