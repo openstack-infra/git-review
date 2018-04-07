@@ -1486,6 +1486,28 @@ def _main():
                              "you are submitting more than one patch")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
                         help="Output more information about what's going on")
+
+    wip_group = parser.add_mutually_exclusive_group()
+    wip_group.add_argument("-w", "--work-in-progress", dest="wip",
+                           action="store_true",
+                           help="Send patch as work in progress for Gerrit "
+                                "versions >= 2.15")
+    wip_group.add_argument("-W", "--ready", dest="ready", action="store_true",
+                           help="Send patch that is already work in progress"
+                                " as ready for review. Gerrit versions >="
+                                " 2.15")
+
+    private_group = parser.add_mutually_exclusive_group()
+    private_group.add_argument("-p", "--private", dest="private",
+                               action="store_true",
+                               help="Send patch as a private patch ready for "
+                                    "review. Gerrit versions >= 2.15")
+    private_group.add_argument("-P", "--remove-private", dest="remove_private",
+                               action="store_true",
+                               help="Send patch which already in private state"
+                                    " to normal patch."" Gerrit versions >= "
+                                    "2.15")
+
     parser.add_argument("--no-custom-script", dest="custom_script",
                         action="store_false", default=True,
                         help="Do not run custom scripts.")
@@ -1514,7 +1536,12 @@ def _main():
                         update=False,
                         setup=False,
                         list=False,
-                        yes=False)
+                        yes=False,
+                        wip=False,
+                        ready=False,
+                        private=False,
+                        remove_private=False)
+
     try:
         (top_dir, git_dir) = git_directories()
     except GitDirectoriesException as _no_git_dir:
@@ -1640,6 +1667,18 @@ def _main():
             run_command(regenerate_cmd,
                         GIT_EDITOR="sed -i -e "
                         "'/^Change-Id:/d'")
+
+    if options.wip:
+        cmd += '\%wip'
+
+    if options.ready:
+        cmd += '\%ready'
+
+    if options.private:
+        cmd += '\%private'
+
+    if options.remove_private:
+        cmd += '\%remove-private'
 
     if options.dry:
         print("Please use the following command "
