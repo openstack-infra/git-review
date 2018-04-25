@@ -1438,10 +1438,13 @@ def _main():
     fetch.set_defaults(download=False, compare=False, cherrypickcommit=False,
                        cherrypickindicate=False, cherrypickonly=False)
     fetch.add_argument("-d", "--download", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE",
+                       action=DownloadFlag, metavar="CHANGE[,PS]",
                        const="download",
                        help="Download the contents of an existing gerrit "
-                            "review into a branch")
+                            "review into a branch. Include the patchset "
+                            "number to download a specific version of the "
+                            "change. The default is to take the most recent "
+                            "version.")
     fetch.add_argument("-x", "--cherrypick", dest="changeidentifier",
                        action=DownloadFlag, metavar="CHANGE",
                        const="cherrypickcommit",
