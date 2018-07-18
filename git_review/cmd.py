@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 COPYRIGHT = """\
@@ -1700,6 +1701,16 @@ def _main():
 
 
 def main():
+    # workaround for avoiding UnicodeEncodeError on print() with older python
+    if sys.version_info[0] < 3:
+        # without reload print would fail even if sys.stdin.encoding
+        # would report utf-8
+        # see: https://stackoverflow.com/a/23847316/99834
+        stdin, stdout, stderr = sys.stdin, sys.stdout, sys.stderr
+        reload(sys)
+        sys.stdin, sys.stdout, sys.stderr = stdin, stdout, stderr
+        sys.setdefaultencoding(os.environ.get('PYTHONIOENCODING', 'utf-8'))
+
     try:
         _main()
     except GitReviewException as e:

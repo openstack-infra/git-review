@@ -104,6 +104,17 @@ class GitReviewConsole(testtools.TestCase, fixtures.TestWithFixtures):
         self.run_cmd_patcher.stop()
         super(GitReviewConsole, self).tearDown()
 
+    @mock.patch('git_review.cmd.get_version',
+                side_effect=cmd.GitReviewException(u"simple-toπ㌀c"))
+    def test_print_exception_with_unicode(self, exists_mock):
+
+        try:
+            with mock.patch('sys.argv', ['git-review', '--version']):
+                with self.assertRaisesRegexp(SystemExit, '1'):
+                    cmd.main()
+        except Exception as e:
+            self.fail('Exception not expected: %s' % e)
+
     @mock.patch('git_review.cmd.query_reviews')
     @mock.patch('git_review.cmd.get_remote_url', mock.MagicMock)
     @mock.patch('git_review.cmd._has_color', False)
