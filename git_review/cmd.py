@@ -1401,11 +1401,6 @@ def _main():
                         help="Add reviewers to uploaded patch sets.")
     parser.add_argument("-D", "--draft", dest="draft", action="store_true",
                         help="Submit review as a draft")
-    parser.add_argument("-c", "--compatible", dest="compatible",
-                        action="store_true",
-                        help="Push change to refs/for/* for compatibility "
-                             "with Gerrit versions < 2.3. Ignored if "
-                             "-D/--draft is used.")
     parser.add_argument("-n", "--dry-run", dest="dry", action="store_true",
                         help="Don't actually submit the branch for review")
     parser.add_argument("-i", "--new-changeid", dest="regenerate",
@@ -1612,14 +1607,12 @@ def _main():
             sys.exit(1)
     assert_one_change(remote, branch, yes, have_hook)
 
-    ref = "publish"
+    ref = "for"
 
     if options.draft:
         ref = "drafts"
         if options.custom_script:
             run_custom_script("draft")
-    elif options.compatible:
-        ref = "for"
 
     cmd = "git push %s HEAD:refs/%s/%s" % (remote, ref, branch)
     if options.topic is not None:
