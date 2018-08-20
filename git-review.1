@@ -257,6 +257,17 @@ changes. This is the default value unless overridden by
 file, and is implied by providing a specific branch name on the
 command line.
 .El
+.It gitreview.usepushurl
+This setting determines whether to use a separate Git remote for
+the Gerrit connection, or to set 'pushurl' on the remote 'origin'.
+.Pp
+A value of 'true' or 'false' should be specified.
+.Bl -tag
+.It false
+Do not use 'pushurl' and instead use a separate remote.
+.It true
+Use 'pushurl' for interacting with Gerrit.
+.El
 .It gitreview.rebase
 This setting determines whether changes submitted will
 be rebased to the newest state of the branch.
