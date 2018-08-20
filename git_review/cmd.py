@@ -1209,7 +1209,7 @@ def fetch_review(review, masterbranch, remote, project):
             refspec = review_info['currentPatchSet']['ref']
         else:
             refspec = [ps for ps in review_info['patchSets']
-                       if ps['number'] == patchset_number][0]['ref']
+                       if str(ps['number']) == patchset_number][0]['ref']
     except IndexError:
         raise PatchSetNotFound(review_arg)
     except KeyError:
