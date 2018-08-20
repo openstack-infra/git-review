@@ -11,6 +11,7 @@ for review.
    installation
    usage
    developing
+   releasenotes
 
 
 Indices and tables
