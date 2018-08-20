@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import functools
 import os
 import textwrap
@@ -352,3 +353,62 @@ class GitReviewUnitTest(testtools.TestCase):
         check_remote.side_effect = Exception()
         self.assertRaises(Exception, cmd._main)
         self.assertTrue(resolve_tracking.called)
+
+
+class DownloadFlagUnitTest(testtools.TestCase):
+
+    def setUp(self):
+        super(DownloadFlagUnitTest, self).setUp()
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument(
+            '-d',
+            action=cmd._DownloadFlag,
+            const='download',
+            dest='cid',
+        )
+
+    def test_store_id(self):
+        args = self.parser.parse_args(['-d', '12345'])
+        self.assertEqual('12345', args.cid)
+
+    def test_parse_url(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/12345']
+        )
+        self.assertEqual('12345', args.cid)
+
+    def test_parse_url_trailing_slash(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/12345/']
+        )
+        self.assertEqual('12345', args.cid)
+
+    def test_parse_url_with_update(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/12345/2']
+        )
+        self.assertEqual('12345,2', args.cid)
+
+    def test_parse_url_with_hash(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/#/c/12345']
+        )
+        self.assertEqual('12345', args.cid)
+
+    def test_parse_url_with_hash_and_update(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/#/c/12345/1']
+        )
+        self.assertEqual('12345,1', args.cid)
+
+    def test_parse_polygerrit_url(self):
+        args = self.parser.parse_args(
+            ['-d',
+             'https://review.openstack.org/c/org/project/+/12345']
+        )
+        self.assertEqual('12345', args.cid)

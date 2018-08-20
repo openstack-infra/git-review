@@ -1377,16 +1377,51 @@ def assert_valid_reviewers(reviewers):
                 "Whitespace not allowed in reviewer: '%s'" % reviewer)
 
 
+class _DownloadFlag(argparse.Action):
+    """Special action for the various forms of downloading reviews.
+
+    Additional option parsing: store value in 'dest', but
+    at the same time set one of the flag options to True
+    """
+    def __call__(self, parser, namespace, value, option_string=None):
+        url = urlparse(value)
+        # Turn URLs into change ids:
+        #   https://review.openstack.org/423436
+        # and
+        #   https://review.openstack.org/423436/
+        # and
+        #   https://review.openstack.org/#/c/423436
+        # and
+        #   https://review.openstack.org/c/<project>/+/423436
+        # become
+        #   "423436"
+        # while
+        #   https://review.openstack.org/423436/1
+        # and
+        #   https://review.openstack.org/#/c/423436/1
+        # and
+        #   https://review.openstack.org/c/<project>/+/423436/1
+        # become
+        #   "423436,1".
+        #
+        # If there is a #, the rest of the path is stored in the
+        # "fragment", otherwise that will be empty.
+        base = url.fragment or url.path
+        parts = base.rstrip('/').lstrip('/c').split('/')
+        # PolyGerrit places the change after a '+' symbol in the url
+        try:
+            parts = parts[parts.index('+') + 1:]
+        except ValueError:
+            pass
+        change = parts[0]
+        if len(parts) > 1:
+            change = '%s,%s' % (change, parts[1])
+        setattr(namespace, self.dest, change)
+        setattr(namespace, self.const, True)
+
+
 def _main():
     usage = "git review [OPTIONS] ... [BRANCH]"
-
-    class DownloadFlag(argparse.Action):
-        """Additional option parsing: store value in 'dest', but
-           at the same time set one of the flag options to True
-        """
-        def __call__(self, parser, namespace, values, option_string=None):
-            setattr(namespace, self.dest, values)
-            setattr(namespace, self.const, True)
 
     parser = argparse.ArgumentParser(usage=usage, description=COPYRIGHT)
 
@@ -1433,7 +1468,7 @@ def _main():
     fetch.set_defaults(download=False, compare=False, cherrypickcommit=False,
                        cherrypickindicate=False, cherrypickonly=False)
     fetch.add_argument("-d", "--download", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE[,PS]",
+                       action=_DownloadFlag, metavar="CHANGE[,PS]",
                        const="download",
                        help="Download the contents of an existing gerrit "
                             "review into a branch. Include the patchset "
@@ -1441,26 +1476,26 @@ def _main():
                             "change. The default is to take the most recent "
                             "version.")
     fetch.add_argument("-x", "--cherrypick", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE",
+                       action=_DownloadFlag, metavar="CHANGE",
                        const="cherrypickcommit",
                        help="Apply the contents of an existing gerrit "
                              "review onto the current branch and commit "
                              "(cherry pick; not recommended in most "
                              "situations)")
     fetch.add_argument("-X", "--cherrypickindicate", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE",
+                       action=_DownloadFlag, metavar="CHANGE",
                        const="cherrypickindicate",
                        help="Apply the contents of an existing gerrit "
                        "review onto the current branch and commit, "
                        "indicating its origin")
     fetch.add_argument("-N", "--cherrypickonly", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE",
+                       action=_DownloadFlag, metavar="CHANGE",
                        const="cherrypickonly",
                        help="Apply the contents of an existing gerrit "
                        "review to the working directory and prepare "
                        "for commit")
     fetch.add_argument("-m", "--compare", dest="changeidentifier",
-                       action=DownloadFlag, metavar="CHANGE,PS[-NEW_PS]",
+                       action=_DownloadFlag, metavar="CHANGE,PS[-NEW_PS]",
                        const="compare",
                        help="Download specified and latest (or NEW_PS) "
                        "patchsets of an existing gerrit review into "
