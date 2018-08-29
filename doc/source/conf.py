@@ -31,6 +31,7 @@ import os
 extensions = [
     'sphinx.ext.autodoc',
     'openstackdocstheme',
+    'reno.sphinxext',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

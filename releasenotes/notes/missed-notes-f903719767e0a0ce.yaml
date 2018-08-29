@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Patch download now supports change urls. Rather than forcing users to copy
+    only part of a URL to a review, users may now paste the whole change URL.
+fixes:
+  - |
+    Fix git review -d M,N for newer gerrit. The "number" field returned via
+    gerrit JSON can be a string (2.13) or a integer (~2.14).
+  - |
+    Update default gerrit namespace for newer gerrit. According to Gerrit
+    documentation for 2.15.3, refs/for/'branch' should be used when pushing
+    changes to Gerrit instead of refs/publish/'branch'.
+upgrade:
+  - |
+    The ``-c`` and ``--compatible`` command line options have been removed.
+    They had been there so someone could request compatibility with older
+    Gerrits, but the need for this has gone away.
