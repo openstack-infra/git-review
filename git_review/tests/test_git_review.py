@@ -386,12 +386,13 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_git_review_t(self):
         self._run_git_review('-s')
         self._simple_change('test file modified', 'commit message for bug 654')
-        self._assert_branch_would_be('master/zat', extra_args=['-t', 'zat'])
+        self._assert_branch_would_be('master%topic=zat',
+                                     extra_args=['-t', 'zat'])
 
     def test_bug_topic(self):
         self._run_git_review('-s')
         self._simple_change('a change', 'new change for bug 123')
-        self._assert_branch_would_be('master/bug/123')
+        self._assert_branch_would_be('master%topic=bug/123')
 
     def test_bug_topic_newline(self):
         self._run_git_review('-s')
@@ -401,7 +402,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_bp_topic(self):
         self._run_git_review('-s')
         self._simple_change('a change', 'new change for blueprint asdf')
-        self._assert_branch_would_be('master/bp/asdf')
+        self._assert_branch_would_be('master%topic=bp/asdf')
 
     def test_bp_topic_newline(self):
         self._run_git_review('-s')
@@ -475,7 +476,7 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
     def test_git_review_T(self):
         self._run_git_review('-s')
         self._simple_change('test file modified', 'commit message for bug 456')
-        self._assert_branch_would_be('master/bug/456')
+        self._assert_branch_would_be('master%topic=bug/456')
         self._assert_branch_would_be('master', extra_args=['-T'])
 
     def test_git_review_T_t(self):
