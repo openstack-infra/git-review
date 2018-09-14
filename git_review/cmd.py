@@ -367,9 +367,7 @@ def test_remote_url(remote_url):
             print("%s worked. Description: %s" % (remote_url, description))
         return True
     else:
-        if VERBOSE:
-            print("%s did not work. Description: %s" % (
-                remote_url, description))
+        print("%s did not work. Description: %s" % (remote_url, description))
         return False
 
 
