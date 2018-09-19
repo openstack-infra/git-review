@@ -1675,16 +1675,18 @@ def _main():
             run_custom_script("draft")
 
     cmd = "git push %s HEAD:refs/%s/%s" % (remote, ref, branch)
+    push_options = []
     if options.topic is not None:
         topic = options.topic
     else:
         topic = None if options.notopic else get_topic(branch)
+
     if topic and topic != branch:
-        cmd += "/%s" % topic
+        push_options.append("topic=%s" % topic)
 
     if options.reviewers:
         assert_valid_reviewers(options.reviewers)
-        cmd += "%" + ",".join("r=%s" % r for r in options.reviewers)
+        push_options += ["r=%s" % r for r in options.reviewers]
 
     if options.regenerate:
         print("Amending the commit to regenerate the change id\n")
@@ -1698,17 +1700,19 @@ def _main():
                         "'/^Change-Id:/d'")
 
     if options.wip:
-        cmd += '\%wip'
+        push_options.append('wip')
 
     if options.ready:
-        cmd += '\%ready'
+        push_options.append('ready')
 
     if options.private:
-        cmd += '\%private'
+        push_options.append('private')
 
     if options.remove_private:
-        cmd += '\%remove-private'
+        push_options.append('remove-private')
 
+    if push_options:
+        cmd += "%" + ",".join(push_options)
     if options.dry:
         print("Please use the following command "
               "to send your commits to review:\n")
