@@ -938,61 +938,21 @@ def assert_one_change(remote, branch, yes, have_hook):
                 sys.exit(1)
 
 
-def use_topic(why, topic):
-    """Inform the user about why a particular topic has been selected."""
-    if VERBOSE:
-        print(why % ('"%s"' % topic,))
-    return topic
-
-
 def get_topic(target_branch):
-
     branch_name = get_branch_name(target_branch)
 
     branch_parts = branch_name.split("/")
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
-        return use_topic("Using change number %s "
-                         "for the topic of the change submitted",
-                         "/".join(branch_parts[2:]))
+        topic = "/".join(branch_parts[2:])
+        if VERBOSE:
+            print("Using change number %s for the topic of the change "
+                  "submitted" % topic)
+        return topic
 
-    preferred_log_format = "%B"
-    log_output = run_command("git log --pretty='" + preferred_log_format +
-                             "' HEAD^1..HEAD")
-    if log_output == preferred_log_format:
-        # The %B format specifier is supported starting at Git v1.7.2. If it's
-        # not supported, we'll just get back '%B', so we try something else.
-        # The downside of %s is that it removes newlines in the subject.
-        log_output = run_command("git log --pretty='%s%n%b' HEAD^1..HEAD")
-    bug_re = r'''(?x)                # verbose regexp
-                 \b([Bb]ug|[Ll][Pp]) # bug or lp
-                 [ \t\f\v]*          # don't want to match newline
-                 [:]?                # separator if needed
-                 [ \t\f\v]*          # don't want to match newline
-                 [#]?                # if needed
-                 [ \t\f\v]*          # don't want to match newline
-                 (\d+)               # bug number'''
-
-    match = re.search(bug_re, log_output)
-    if match is not None:
-        return use_topic("Using bug number %s "
-                         "for the topic of the change submitted",
-                         "bug/%s" % match.group(2))
-
-    bp_re = r'''(?x)                         # verbose regexp
-                \b([Bb]lue[Pp]rint|[Bb][Pp]) # a blueprint or bp
-                [ \t\f\v]*                   # don't want to match newline
-                [#:]?                        # separator if needed
-                [ \t\f\v]*                   # don't want to match newline
-                ([0-9a-zA-Z-_]+)             # any identifier or number'''
-    match = re.search(bp_re, log_output)
-    if match is not None:
-        return use_topic("Using blueprint number %s "
-                         "for the topic of the change submitted",
-                         "bp/%s" % match.group(2))
-
-    return use_topic("Using local branch name %s "
-                     "for the topic of the change submitted",
-                     branch_name)
+    if VERBOSE:
+        print("Using local branch name %s for the topic of the change "
+              "submitted" % branch_name)
+    return branch_name
 
 
 class CannotQueryOpenChangesets(CommandFailed):

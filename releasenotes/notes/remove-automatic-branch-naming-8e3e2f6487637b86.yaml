@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Support for auto-configuration of topic names based on the presence of
+    keywords in the commit message is removed. Previously, keywords such as
+    ``bug``, ``bp`` or ``lp`` followed by a number would result in branch
+    names containing the associated number, e.g. ``bug/123``. This feature
+    was OpenStack specific, was a frequent source of bugs and clearly wasn't
+    being used that often, given that StoryBoard is a thing now and no one had
+    updated this feature to handle that metadata.
