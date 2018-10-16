@@ -383,6 +383,18 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
         finally:
             os.environ.update(LANG=lang_env)
 
+    def test_no_topic(self):
+        """Test on change with no topic.
+
+        This will be checked out as 'review/{owner}/{ID}'. We don't want to set
+        the topic to '{ID}'.
+        """
+        self._run_git_review('-s')
+        curr_branch = self._run_git('rev-parse', '--abbrev-ref', 'HEAD')
+        self._run_git('checkout', '-b', 'review/johndoe/123456')
+        self._simple_change('test file modified', 'derp derp derp')
+        self._assert_branch_would_be(curr_branch)
+
     def test_git_review_t(self):
         self._run_git_review('-s')
         self._simple_change('test file modified', 'commit message for bug 654')

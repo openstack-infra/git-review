@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    If a patch has no topic, downloading it will result in a topic of
+    ``review/{owner}/{ID}``. Previously, submitting this would then set the
+    topic to ``{ID}``. This was incorrect behavior and is now resolved.

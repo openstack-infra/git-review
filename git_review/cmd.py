@@ -943,6 +943,10 @@ def get_topic(target_branch):
 
     branch_parts = branch_name.split("/")
     if len(branch_parts) >= 3 and branch_parts[0] == "review":
+        # We don't want to set the review number as the topic
+        if branch_parts[2].isdigit():
+            return
+
         topic = "/".join(branch_parts[2:])
         if VERBOSE:
             print("Using change number %s for the topic of the change "
