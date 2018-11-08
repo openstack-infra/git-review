@@ -24,30 +24,19 @@ import json
 import os
 import re
 import shlex
+import six
 import subprocess
 import sys
 import textwrap
 
 import pkg_resources
 import requests
+from six.moves import configparser
+from six.moves import input as do_input
+from six.moves.urllib.parse import urlencode
+from six.moves.urllib.parse import urljoin
+from six.moves.urllib.parse import urlparse
 
-if sys.version < '3':
-    import ConfigParser
-    import urllib
-    import urlparse
-    urlencode = urllib.urlencode
-    urljoin = urlparse.urljoin
-    urlparse = urlparse.urlparse
-    do_input = raw_input
-else:
-    import configparser as ConfigParser
-
-    import urllib.parse
-    import urllib.request
-    urlencode = urllib.parse.urlencode
-    urljoin = urllib.parse.urljoin
-    urlparse = urllib.parse.urlparse
-    do_input = input
 
 VERBOSE = False
 UPDATE = False
@@ -133,7 +122,7 @@ def run_command_status(*argv, **kwargs):
         print(datetime.datetime.now(), "Running:", " ".join(argv))
     if len(argv) == 1:
         # for python2 compatibility with shlex
-        if sys.version_info < (3,) and isinstance(argv[0], unicode):
+        if sys.version_info < (3,) and isinstance(argv[0], six.text_type):
             argv = shlex.split(argv[0].encode('utf-8'))
         else:
             argv = shlex.split(str(argv[0]))
@@ -703,7 +692,7 @@ def check_color_support():
 
 def load_config_file(config_file):
     """Load configuration options from a file."""
-    configParser = ConfigParser.ConfigParser()
+    configParser = configparser.ConfigParser()
     configParser.read(config_file)
     options = {
         'scheme': 'scheme',
