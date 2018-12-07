@@ -244,7 +244,10 @@ the tests that OpenStack CI systems run. Behind the scenes, tox is running
 `testr run --parallel`, but is set up such that you can supply any additional
 testr arguments that are needed to tox. For example, you can run:
 `tox -- --analyze-isolation` to cause tox to tell testr to add
---analyze-isolation to its argument list.
+--analyze-isolation to its argument list. Arguments past ``--`` are passed
+through to testr, for instance to run a single test::
+
+  tox -e py36 -- git_review.tests.test_unit.SomeClass.some_test
 
 It is also possible to run the tests inside of a virtual environment
 you have created, or it is possible that you have all of the dependencies
