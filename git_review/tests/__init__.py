@@ -153,7 +153,7 @@ class GerritHelpers(DirHelpers):
         os.makedirs(self._dir('gsite', 'etc'))
         # create SSH host key
         host_key_file = self._dir('gsite', 'etc', 'ssh_host_rsa_key')
-        utils.run_cmd('ssh-keygen', '-t', 'rsa', '-b', '4096',
+        utils.run_cmd('ssh-keygen', '-t', 'rsa', '-b', '4096', '-m', 'PEM',
                                     '-f', host_key_file, '-N', '')
 
         print("Creating a new golden site of version " + GOLDEN_SITE_VER)
@@ -171,7 +171,7 @@ class GerritHelpers(DirHelpers):
 
         # create SSH public key
         key_file = self._dir('gsite', 'test_ssh_key')
-        utils.run_cmd('ssh-keygen', '-t', 'rsa', '-b', '4096',
+        utils.run_cmd('ssh-keygen', '-t', 'rsa', '-b', '4096', '-m', 'PEM',
                                     '-f', key_file, '-N', '')
         with open(key_file + '.pub', 'rb') as pub_key_file:
             pub_key = pub_key_file.read()
