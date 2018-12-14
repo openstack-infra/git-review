@@ -18,6 +18,7 @@
 import json
 import os
 import shutil
+import testtools
 
 from git_review import tests
 from git_review.tests import utils
@@ -286,9 +287,10 @@ class GitReviewTestCase(tests.BaseGitReviewTestCase):
 
         br_out = self._run_git('checkout',
                                '-b', 'test_branch', 'origin/maint')
-        expected_track = 'Branch test_branch set up to track remote' + \
-                         ' branch maint from origin.'
-        self.assertIn(expected_track, br_out)
+        expected_track = ".*\nBranch '?test_branch'? set up to track remote" + \
+                         " branch '?maint'? from '?origin'?."
+        track_matcher = testtools.matchers.MatchesRegex(expected_track)
+        self.assertThat(br_out, track_matcher)
         branches = self._run_git('branch', '-a')
         expected_branch = '* test_branch'
         observed = branches.split('\n')
