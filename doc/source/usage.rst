@@ -53,3 +53,15 @@ If you want to see a list of open reviews::
 If you just want to do the commit message and remote setup steps::
 
     git review -s
+
+
+.. note::
+
+   If using multiple SSH keys (identities) or SSH keys with passphrases, you
+   may wish to use a tool like `ssh-agent`__, `Gnome Seahorse`__ or `KDE
+   KWallet`__ to avoid manual SSH configuration or frequent passphrase
+   requests.
+
+   __ https://www.ssh.com/ssh/agent
+   __ https://wiki.gnome.org/Apps/Seahorse
+   __ https://userbase.kde.org/KDE_Wallet_Manager
