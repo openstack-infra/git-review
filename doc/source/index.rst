@@ -2,7 +2,7 @@
  git-review
 ============
 
-``git-review`` is a tool that helps submitting git branches to gerrit
+``git-review`` is a tool that helps submitting git branches to Gerrit
 for review.
 
 .. toctree::
@@ -12,12 +12,3 @@ for review.
    usage
    developing
    releasenotes
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
