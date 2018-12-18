@@ -795,8 +795,8 @@ def check_remote(branch, remote, scheme, hostname, port, project,
             printwrap("Please set the push-url on your origin remote to the "
                       "location of your gerrit server and try again")
         else:
-            printwrap("Please manually create a remote "
-                      "named \"%s\" and try again." % remote)
+            printwrap("Please manually create a remote named \"%s\" or "
+                      "rename the default one and try again." % remote)
         sys.exit(1)
 
     # Gerrit remote not present, try to add it
