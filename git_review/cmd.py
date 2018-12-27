@@ -261,12 +261,15 @@ def git_config_get_value(section, option, default=None, as_bool=False):
     try:
         result = run_command_exc(GitConfigException, *cmd).strip()
         if VERBOSE:
-            print(datetime.datetime.now(), "result:", result)
+            print(datetime.datetime.now(), "... %s.%s = %s"
+                  % (section, option, result))
         return result
     except GitConfigException as exc:
         if exc.rc == 1:
-            if VERBOSE:
-                print(datetime.datetime.now(), "using default:", default)
+            if VERBOSE and default is not None:
+                print(datetime.datetime.now(),
+                      "... nothing in git config, returning func parameter:",
+                      default)
             return default
         raise
 
@@ -289,9 +292,16 @@ class Config(object):
                 self.config.update(load_config_file(filename))
 
     def __getitem__(self, key):
+        """Let 'git config --get' override every Config['key'] access"""
         value = git_config_get_value('gitreview', key)
         if value is None:
             value = self.config[key]
+        # "--verbose" doesn't trace *early* invocations; for that you
+        # must change the value at the top of this file (*and* pass
+        # --verbose)
+        if VERBOSE:
+            print(datetime.datetime.now(),
+                  "Config['%s'] = %s " % (key, value))
         return value
 
 
