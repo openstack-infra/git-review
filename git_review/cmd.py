@@ -1195,7 +1195,7 @@ def fetch_review(review, masterbranch, remote, project):
 
     print("Downloading %s from gerrit" % refspec)
     run_command_exc(PatchSetGitFetchFailed,
-                    "git", "fetch", remote, refspec)
+                    "git", "fetch", remote_url, refspec)
     return branch_name, remote_branch
 
 
