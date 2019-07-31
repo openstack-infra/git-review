@@ -1,5 +1,0 @@
-hacking>=0.10.0,<0.11
-mock
-fixtures>=0.3.14
-stestr>=2.2.0
-testtools>=0.9.34

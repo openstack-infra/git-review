@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Fixed ``usepushurl`` to work when a read-only mirror being used as
-    ``origin`` does not contain ``refs/changes`` from gerrit.
